@@ -1,6 +1,10 @@
-function x = fourpts(n)
+function x = fourpts(n, dom)
 
-x = linspace(-1, 1, n+1).';
+if ( nargin == 1 )
+    dom = [-1,1];
+end
+
+x = linspace(dom(1), dom(end), n+1).';
 x(end) = [];
 
 end

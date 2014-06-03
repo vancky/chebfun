@@ -77,6 +77,13 @@ function varargout = pde15s(pdeFun, tt, u0, bc, varargin)
 
 % TODO: Syncronise with CHEBOP syntax. (In particular, .lbc, .rbc, and .bc).
 
+if ( ischar(bc) && strcmpi(bc, 'periodic') )
+    
+    [varargout{1:nargout}] = fourtech.pde15s(pdeFun, tt, u0, varargin{:});
+    return
+
+end
+
 global DIFFORDER SYSSIZE
 DIFFORDER = 0;
 SYSSIZE = 0;

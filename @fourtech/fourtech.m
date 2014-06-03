@@ -103,15 +103,20 @@ classdef fourtech < smoothfun
         % Compute Fourier barycentric weights:
         w = barywts(n)
         
-        % Compute Fourier points (x) and optionally quadrature (w)
-        % and barycentric (v) weights:
-        [x, w, v] = fourpts(n);
+        % Differentiation matrix:
+        D = diffmat(n, m);
+        
+        % Compute Fourier points
+        x = fourpts(n, dom);
         
         % Convert coefficients to values:
         values = coeffs2vals(coeffs);
         
         % Make a FOURTECH (constructor shortcut):
         f = make( varargin );
+        
+        % Periodic version of PDE15S.
+        varargout = pde15s(varargin);
         
         % Compute Fourier quadrature weights (trapezoidal rule):
         w = quadwts(n)
