@@ -47,8 +47,7 @@ else
     
     % TODO: Improve efficiency of this code for higher derivatives:
     if ( mod(N, 2) )
-        % TODO: Fix this.
-        error('Not supported yet.')
+        column = (1i*[0:(N-1)/2 -(N-1)/2:-1]').^m;
     else
         column = (1i*[0:N/2-1 0 -N/2+1:-1]').^m;
     end
