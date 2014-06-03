@@ -355,7 +355,9 @@ if ( isnan(optN) )
     u0 = simplify(u0);
 else
     for k = 1:numel(u0)
-        u0(:,k).funs{1}.onefun = prolong(u0(:,k).funs{1}.onefun, optN);
+        uk = u0(:,k);
+        uk.funs{1}.onefun = prolong(uk.funs{1}.onefun, optN);
+        u0(:,k) = uk;
     end
 end
 
@@ -389,6 +391,7 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% MISC %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Initial condition:
+u0 = simplify(u0, tol);
 uCurrent = u0;
 % Storage:
 uOut = cell(1, numel(tt));
