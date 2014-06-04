@@ -110,7 +110,7 @@ while ( 1 )
     % Check for happiness:
     f.coeffs = coeffs;
     f.vscale = vscale;
-    [ishappy, epslevel, cutoff] = happinessCheck(f, op, pref); 
+    [ishappy, epslevel, cutoff] = happinessCheck(f, f.values, op, pref); 
         
     % We're happy! :)
     if ( ishappy ) 
