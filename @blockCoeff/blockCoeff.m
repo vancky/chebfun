@@ -50,53 +50,62 @@ classdef blockCoeff
         end
         
         
-        function C = mtimes(A, B)
+        function C = mtimes(A, B)            
             
             if ( isnumeric(A) )
                 % Allow multiplying a BLOCKCOEFF with a scalar.
-                c = B.coeffs;
+                Bcoeffs = B.coeffs;
                 for k = 1:numel(B.coeffs)
-                    c{k} = A*c{k};
+                    Bcoeffs{k} = A*Bcoeffs{k};
                 end
                 
                 % Create the result.
-                C = blockCoeff(c, B.domain);
+                C = blockCoeff(Bcoeffs, B.domain);
                 return
             elseif ( isnumeric(B) )
                 C = mtimes(B, A);
                 return
             end
             
-            if ( isempty(A.coeffs) || isempty(B.coeffs) )
+            % Extract out the coefficients of A and B: 
+            Acoeffs = A.coeffs;
+            Bcoeffs = B.coeffs;
+            
+            if ( isempty(Acoeffs) || isempty(Bcoeffs) )
                 C = blockCoeff([]);
                 return
             end
             
             % Initialize constant term of A times the coeffs of B.
-            c = B.coeffs;
-            for k = 1:numel(B.coeffs)
-                c{k} = A.coeffs{end}.*c{k};
+            for k = 1:numel(Bcoeffs)
+                Bcoeffs{k} = Acoeffs{end}.*Bcoeffs{k};
             end
             
             % Do a convolution-style multiplication for the rest of A.
-            if ( numel(A.coeffs) > 1 )
-                z = {0*c{1}};  % an appropriate zero chebfun
+            if ( numel(Acoeffs) > 1 )
+                z = {0*Bcoeffs{1}};  % an appropriate zero chebfun
             end
-            for j = 1:numel(A.coeffs)-1
+            for j = 1:numel(Acoeffs)-1
                 B = diff(B);  % differentiate this operator
-                c = [z, c];
-                for k = 1:numel(B.coeffs)
-                    c{k} = c{k} + A.coeffs{end-j}.*B.coeffs{k};
+                Bcoeffs = [z, Bcoeffs];
+                BcoeffsOld = B.coeffs;
+                for k = 1:numel(Bcoeffs)
+                    Bcoeffs{k} = Bcoeffs{k} + Acoeffs{end-j}.*BcoeffsOld{k};
                 end
             end
             
             % Create the result.
-            C = blockCoeff(c, A.domain);
+            C = blockCoeff(Bcoeffs, A.domain);
         end
         
         function C = plus(A, B)
-            sA = numel(A.coeffs);
-            sB = numel(B.coeffs);
+            
+            % Extract out the coefficients of A and B: 
+            Acoeffs = A.coeffs;
+            Bcoeffs = B.coeffs;
+            
+            sA = numel(Acoeffs);
+            sB = numel(Bcoeffs);
             
             % Empty operand returns empty result. 
             if ( (sA == 0) || (sB==0) )
@@ -106,18 +115,18 @@ classdef blockCoeff
             
             % Get to same length.
             if ( sA < sB )
-                z = {0*A.coeffs{1}};
-                A.coeffs = [repmat(z, 1, sB-sA), A.coeffs];
+                z = {0*Acoeffs{1}};
+                Acoeffs = [repmat(z, 1, sB-sA), Acoeffs];
                 sA = sB;
             elseif ( sB < sA )
-                z = {0*B.coeffs{1}};
-                B.coeffs = [repmat(z, 1, sA-sB), B.coeffs];
+                z = {0*Bcoeffs{1}};
+                Bcoeffs = [repmat(z, 1, sA-sB), Bcoeffs];
             end
             
             % Do the work.
             c = cell(1, sA);
             for k = 1:sA
-                c{k} = A.coeffs{k} + B.coeffs{k};
+                c{k} = Acoeffs{k} + Bcoeffs{k};
             end
             C = blockCoeff(c, A.domain);
         end
