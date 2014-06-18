@@ -19,11 +19,11 @@ classdef (InferiorClasses = {?chebfun}) operatorBlock < linBlock
     %% CLASS CONSTRUCTOR:
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     methods ( Access = public, Static = false )
-        function A = operatorBlock(domain)
+        function A = operatorBlock(varargin)
         % OPERATORBLOCK constructor
 
             % Simply calls the LINBLOCK constructor.
-            A = A@linBlock(domain);
+            A = A@linBlock(varargin{:});
             
         end
         

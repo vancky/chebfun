@@ -19,10 +19,10 @@ classdef functionalBlock < linBlock
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     methods ( Access = public, Static = false )
         
-        function A = functionalBlock(domain)
+        function A = functionalBlock(varargin)
         % FUNCTIONALBLOCK constructor, simply calls the LINBLOCK
         % constructor.
-            A = A@linBlock(domain);
+            A = A@linBlock(varargin{:});
         end
         
     end
