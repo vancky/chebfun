@@ -125,7 +125,7 @@ classdef functionalBlock < linBlock
         %FUNCTIONALBLOCK.DOT   Synonym for FUNCTIONALBLOCK.INNER.
         %
         % See also FUNCTIONALBLOCK.INNER.
-            F = inner(f);
+            F = functionalBlock.inner(f);
         end
 
         function E = eval(varargin)
@@ -229,14 +229,32 @@ classdef functionalBlock < linBlock
             F.diffOrder = 0;
         end
 
+        function I = ones(domain)
+        %FUNCTIONALBLOCK.ONES   ONES functional.
+        %
+        %   Z = FUNCTIONALBLOCK.ONES(DOMAIN) returns the 'ones functional' for
+        %   functions on the domain DOMAIN (i.e., the functional that maps all
+        %   functions to their inner product with the identity function on the
+        %   same domain).
+            if ( nargin == 0 )
+                pref = cheboppref;
+                domain = pref.domain;
+            end
+
+            % Create the FUNCTIONALBLOCK with information now available.
+            f = chebfun(@(x) 1, domain);
+            I = functionalBlock.inner(f, domain);
+        end
+        
+        
         function S = sum(domain)
         %FUNCTIONALBLOCK.SUM   Definite integration functional.
         %
         %   S = FUNCTIONALBLOCK.SUM(DOMAIN) returns the definite integration
         %   functional on the domain DOMAIN (i.e. the functional that maps a
         %   function to its definite integral).
-            pref = cheboppref;
             if ( nargin == 0 )
+                pref = cheboppref;
                 domain = pref.domain;
             end
 
@@ -252,8 +270,8 @@ classdef functionalBlock < linBlock
         %   Z = FUNCTIONALBLOCK.ZERO(DOMAIN) returns the zero functional for
         %   functions on the domain DOMAIN (i.e., the functional that maps all
         %   functions to 0 on the same domain).
-            pref = cheboppref;
             if ( nargin == 0 )
+                pref = cheboppref;
                 domain = pref.domain;
             end
 

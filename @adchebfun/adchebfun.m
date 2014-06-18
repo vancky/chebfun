@@ -105,7 +105,12 @@ classdef (InferiorClasses = {?chebfun}) adchebfun
             end
             
             obj.domain = dom;
-            obj.jacobian = operatorBlock.eye(dom);
+            
+            if ( isnumeric(obj.func) )
+                obj.jacobian = 1;
+            else
+                obj.jacobian = operatorBlock.eye(dom);
+            end
         end
         
     end
@@ -672,8 +677,11 @@ classdef (InferiorClasses = {?chebfun}) adchebfun
             E = functionalBlock.feval(x, f.domain);
             % Update derivative part
             f.jacobian = E*f.jacobian;
-            % Update CHEBFUN part
-            f.func = feval(f.func, x);
+            % Update FUNC part. If f.func is numeric, we can just return the
+            % scalar value, so only need to do something if f.func is a CHEBFUN:
+            if ( ~isnumeric(f.func) )
+                f.func = feval(f.func, x);
+            end
             % Evaluation is a linear operation, so no need to update linearity
             % information.
             % f.linearity = f.linearity;
@@ -1122,15 +1130,24 @@ classdef (InferiorClasses = {?chebfun}) adchebfun
 
             % Domain information
             dom = u.domain;
-            
+                        
+            uNumeric = isnumeric(u.func);
             % Do we just want one block?
             if ( (numel(v) == 1) && (v < 2) )
                 if ( v )
-                    % Initialize as an OPERATORBLOCK
-                    u.jacobian = operatorBlock.eye(dom);
+                    if ( uNumeric )
+                        u.jacobian = functionalBlock.ones(dom);
+                    else
+                        % Initialize as an OPERATORBLOCK
+                        u.jacobian = operatorBlock.eye(dom);
+                    end
                 else
-                    % Initalize as a CHEBFUN
-                    u.jacobian = chebfun(1, dom);
+                    if ( uNumeric )
+                        u.jacobian = 1;
+                    else
+                        % Initalize as a CHEBFUN
+                        u.jacobian = chebfun(1, dom);
+                    end
                 end
 
                 % Reset linearity information
@@ -1149,14 +1166,28 @@ classdef (InferiorClasses = {?chebfun}) adchebfun
 
                 % Populate a cell operators / functions as required.
                 blocks = cell(1, m);
-                blocks(1,v) = { operatorBlock.zeros(dom) };
-                blocks(1,~v) = { chebfun(0, dom) };
+                
+                if ( uNumeric )
+                    blocks(1,v) = { functionalBlock.zero(dom) };
+                    blocks(1,~v) = { 0 };   
+                else
+                    blocks(1,v) = { operatorBlock.zeros(dom) };
+                    blocks(1,~v) = { chebfun(0, dom) };
+                end
                 
                 % The Kth block is the identity operator / function.
                 if ( v(k) )
-                    blocks{1,k} = operatorBlock.eye(dom);
+                    if ( uNumeric )
+                        blocks{1,k} = functionalBlock.ones(dom);
+                    else    
+                        blocks{1,k} = operatorBlock.eye(dom);
+                    end
                 else
-                    blocks{1,k} = chebfun(1, dom);
+                    if ( uNumeric )
+                        blocks{1,k} = 1;
+                    else
+                        blocks{1,k} = chebfun(1, dom);
+                    end
                 end
 
                 % Convert the cell-array to a CHEBMATRIX and assign to the
@@ -1171,6 +1202,7 @@ classdef (InferiorClasses = {?chebfun}) adchebfun
             
         end
    
+
         function g = sec(f)
             % F = SEC(F)   SEC of an ADCHEBFUN.
             
