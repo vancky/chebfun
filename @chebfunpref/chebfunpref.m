@@ -472,6 +472,8 @@ classdef chebfunpref < chebpref
                 prefList.cheb2Prefs.maxRank');
             fprintf([padString('        sampleTest:') '%d\n'], ...
                 prefList.cheb2Prefs.sampleTest');
+fprintf([padString('        Technology:') '''%s''\n'], ...
+                prefList.cheb2Prefs.technology');
             
             techStr = func2str(tech);
             fprintf([padString('    tech:') '@%s\n'], techStr)
@@ -703,6 +705,7 @@ classdef chebfunpref < chebpref
             factoryPrefs.cheb2Prefs = struct(); 
                 factoryPrefs.cheb2Prefs.maxRank = 513;   
                 factoryPrefs.cheb2Prefs.sampleTest = 1;
+                factoryPrefs.cheb2Prefs.technology = 'chebyshev';
         end
 
     end
