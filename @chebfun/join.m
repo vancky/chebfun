@@ -17,8 +17,6 @@ function f = join(varargin)
 % Copyright 2014 by The University of Oxford and The Chebfun Developers. 
 % See http://www.chebfun.org/ for Chebfun information.
 
-% [TODO]:  Deal with functions on unbounded intervals. (Requires UNBNDFUN.)
-
 % Trivial cases:
 if ( nargin == 0 )
     f = chebfun();
@@ -36,7 +34,7 @@ if ( any(numCols > 1) )
     try
         args = reshape([args{:}], nargin, max(size(args{1})));
     catch
-        error('CHEBFUN:join:dim', 'Matrix dimensions must agree.');
+        error('CHEBFUN:CHEBFUN:join:dim', 'Matrix dimensions must agree.');
     end
     for k = numCols(1):-1:1
         f(k) = columnJoin(args{k,:});
@@ -56,7 +54,7 @@ function f = columnJoin(varargin)
 transStates = cell2mat(cellfun(@(f) logical(f.isTransposed), varargin, ...
     'UniformOutput', false).');
 if ( ~(all(transStates) || all(~transStates)) )
-    error('CHEBFUN:join:trans', ...
+    error('CHEBFUN:CHEBFUN:join:columnJoin:trans', ...
         'All inputs to JOIN must have the same transposition state.');
 end
 

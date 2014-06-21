@@ -12,20 +12,22 @@ function varargout = coeffs2vals( U, varargin )
 % Copyright 2014 by The University of Oxford and The Chebfun Developers.
 % See http://www.chebfun.org/ for Chebfun information.
 
+tech = chebfunpref().tech(); 
+
 if ( nargin == 1 )
-    U = chebtech2.coeffs2vals( U ); 
-    U = chebtech2.coeffs2vals( U.' ).'; 
+    U = tech.coeffs2vals( U ); 
+    U = tech.coeffs2vals( U.' ).'; 
     varargout = {U}; 
     
 elseif ( narargin == 3 )
     S = varargin{1}; 
     V = varargin{2}; 
-    U = chebtech2.coeffs2vals( U ); 
-    V = chebtech2.coeffs2vals( V.' ).'; 
+    U = tech.coeffs2vals( U ); 
+    V = tech.coeffs2vals( V.' ).'; 
     varargout = {U S V};
     
 else
-    error('CHEBFUN2:COEFFS2VALS:inputs', ...
+    error('CHEBFUN:CHEBFUN2:coeffs2vals:inputs', ...
         'The number of input arguments should be one or two.');
     
 end

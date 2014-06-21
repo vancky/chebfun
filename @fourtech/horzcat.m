@@ -6,7 +6,7 @@ function out = horzcat(varargin)
 %   not supported.
 
 % Copyright 2014 by The University of Oxford and The Chebfun Developers.
-% See http://www.chebfun.org for Chebfun information.
+% See http://www.chebfun.org/ for Chebfun information.
 
 % Remove empties:
 empties = cellfun(@isempty, varargin);
@@ -16,7 +16,13 @@ if ( all(empties) )
 else
     varargin(empties) = [];
 end
-  
+
+% Check that all objects are indeed fourtechs.  If not then we should not
+% concatenate.
+if ~all( cell2mat(cellfun(@(f) isa(f,'fourtech'), varargin, 'UniformOutput', false)) )
+    error('CHEBFUN:FOURTECH:horzcat:typeMismatch','Incompatible operation between objects. Make sure functions are of the same type.');
+end
+
 % Prolong each fourtech to the same length:
 n = max(cellfun(@length, varargin));
 F = cellfun(@(f) prolong(f, n), varargin, 'UniformOutput', false);
@@ -39,7 +45,7 @@ out.epslevel = cell2mat(epslevels);
 % Hscale:
 out.hscale = max(cellfun(@(f) f.hscale, F));
 
-% IsReal
+% IsReal:
 areReal = cellfun(@(f) f.isReal, F, 'UniformOutput', false);
 out.isReal = cell2mat(areReal);
 

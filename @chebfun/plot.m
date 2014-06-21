@@ -1,6 +1,10 @@
 function varargout = plot(varargin)
 %PLOT   Basic linear plot for CHEBFUN objects.
-%   PLOT(F) plots the CHEBFUN object F.
+%   PLOT(F) plots the CHEBFUN object F in the interval where it is defined. If F
+%   is complex valued, PLOT(F) is equivalent to PLOT(real(F), imag(F)).
+%
+%   PLOT(F, G) plots the CHEBFUN G versus the CHEBFUN F. Quasimatrices and
+%   array-valued CHEBUFUN objects are also supported in the natural way.
 %
 %   PLOT(F, S) allows various line types, plot symbols, and colors to be used
 %   when S is a character string made from one element from any or all the
@@ -41,16 +45,19 @@ function varargout = plot(varargin)
 %   can be useful when the domain of F is infinite, or for 'zooming in' on, say,
 %   oscillatory CHEBFUN objects. If plotting an array-valued CHEBFUN or more
 %   than one CHEBFUN in a call like PLOT(F, 'b', G, '--r', 'interval', [A, B])
-%   this property is applied globally.
+%   this property is applied globally. Markers, such as 'o', or '.', are ignored
+%   if the interval flag is used.
 %
 %   Besides the usual parameters that control the specifications of lines (see
-%   linespec), the parameter JumpLines determines the linestyle for
-%   discontinuities of the CHEBFUN F. For example, PLOT(F, 'JumpLine', '-r')
-%   will plot discontinuities as solid red lines. By default the plotting style
-%   is ':', and colours are chosen to match the lines they correspond to. It is
-%   possible to modify other properties of JumpLines syntax like PLOT(F,
-%   'JumpLine', {'color', 'r', 'LineWidth', 5}). JumpLines can be suppressed
-%   with the argument 'JumpLine','none'.
+%   linespec), the parameter JumpLine and DeltaLine determines the linestyle for
+%   the discontinuities and the delta functions of the CHEBFUN F, respetively.
+%   For example, PLOT(F, 'JumpLine', '-r') will plot discontinuities as solid
+%   red lines and PLOT(F, 'deltaline', '-r') will plot the delta functions as
+%   solid red lines. By default the plotting style for JumpLine is ':', and '-'
+%   for delta functions and colours are chosen to match the lines they
+%   correspond to. It is possible to modify other properties of JumpLines syntax
+%   like PLOT(F, 'JumpLine', {'color', 'r', 'LineWidth', 5}). JumpLines and
+%   deltaLines can be suppressed with the argument 'none'.
 %
 %   Note that the PLOT(F, 'numpts', N) option for V4 is deprecated, and this
 %   call now has no effect.
@@ -58,11 +65,28 @@ function varargout = plot(varargin)
 % See also PLOTDATA, PLOT3.
 
 % Copyright 2014 by The University of Oxford and The Chebfun Developers.
-% See http://www.chebfun.org for Chebfun information.
+% See http://www.chebfun.org/ for Chebfun information.
 
-% TODO: Figure out the y axis limit for functions which blow up.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% DEVELOPER NOTE:
+%  We actually plot a fifth 'dummy' plot which contains both the line and marker
+%  styles. This is the only plot which has 'handlevis', 'on', and so will be
+%  included in subsequent calls to LEGEND(). The handle to this plot is included
+%  as the fifth output, and the plot itself is set to 'visible', 'off'. Note
+%  that if a user modifies the plot by adjusting HLINE or HPOINT, subsequent
+%  calls the LEGEND will not have the updated style. There's no way to get
+%  around this without a complicated callback procedure.
+%
+%  Note, to clarify, the reason we need all this is that we must plot the line
+%  and points as different plots. MATLAB/PLOT() doesn't have this problem.
+%
+%  Also note that the handles are now output as individually, rather than
+%  forced in to an array.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% Deal with an empty input:
+% TODO: Document plotting of DELTFAFUN objects. (In particular, handle output)
+
+%% Deal with an empty input:
 if ( isempty(varargin{1}) )
     if ( nargout == 1 )
         varargout{1} = plot([]);
@@ -70,23 +94,33 @@ if ( isempty(varargin{1}) )
     return
 end
 
+%% Initialization:
+
+% Suppress inevitable warning for growing these arrays:
+%#ok<*AGROW>
+
 % Store the hold state of the current axis:
 holdState = ishold;
 
-% Store the current X and Y-limits:
+% Store the current X and Y-limits, and whether ylim is in manual or auto mode.
 if ( holdState )
     xLimCurrent = get(gca, 'xlim');
     yLimCurrent = get(gca, 'ylim');
+    yLimModeCurrent = get(gca, 'ylimmode');
 end
 
 % Initialize flags:
 isComplex = false;
 intervalIsSet = false;
+
+% Initialize XLIM and YLIM. Note that the first entries are initialized to be
+% UPPER limits on the LOWER parts of the axes, while the second entries
+% correspond to LOWER bounds on the UPPER parts of the axes. Hence, this
+% somewhat strange convention.
 xLim = [inf, -inf];
 yLim = [inf, -inf];
-
-% Suppress inevitable warning for growing these arrays:
-%#ok<*AGROW>
+defaultXLim = 1;
+defaultYLim = 1;
 
 % Check to see if the 'interval' flag has been set:
 interval = [];
@@ -109,17 +143,30 @@ else
     end
 end
 
+% Support 'interval' by evaluating on a fixed grid size (2000 points). See #602.
+if ( intervalIsSet )
+    for k = 1:numel(varargin)
+        if ( isa(varargin{k}, 'chebfun') )
+            dom = union(domain(varargin{k}), interval);
+            dom(dom < interval(1) | dom > interval(end)) = [];
+            varargin{k} = chebfun(@(x) feval(varargin{k}, x), dom, 2000);
+        end
+    end
+end
+
 % Initialise storage:
 lineData = {};
 pointData = {};
 jumpData = {};
 deltaData = {};
+jumpLineIsSet = any(cellfun(@(v) ischar(v) && strcmpi(v, 'JumpLine'), varargin));
 
 % Remove global plotting options from input arguments.
-[lineStyle, pointStyle, jumpStyle, varargin] = ...
+[lineStyle, pointStyle, jumpStyle, deltaStyle, varargin] = ...
     chebfun.parsePlotStyle(varargin{:});
 
-%%
+%% Preparation of the data:
+
 % Get the data for plotting from PLOTDATA():
 while ( ~isempty(varargin) )
 
@@ -134,7 +181,7 @@ while ( ~isempty(varargin) )
         % We can only plot real against real:
         isComplex = false;
         if ( ~isreal(f) || ~isreal(g) )
-            warning('CHEBFUN:plot:complex', ...
+            warning('CHEBFUN:CHEBFUN:plot:complex', ...
                 'Imaginary parts of complex X and/or Y arguments ignored.');
             f = real(f);
             g = real(g);
@@ -150,8 +197,8 @@ while ( ~isempty(varargin) )
             newData.yPoints = g;
             newData.xJumps = NaN;
             newData.yJumps = NaN;  
-            newData.xDeltas = [];
-            newData.yDeltas = [];
+            newData.xDeltas = NaN;
+            newData.yDeltas = NaN;
             % Do nothing
         elseif ( numel(f) == 1 && numel(g) == 1 )
             % Array-valued CHEBFUN case:
@@ -162,7 +209,7 @@ while ( ~isempty(varargin) )
             g = num2cell(g);
             if ( numel(f) > 1 && numel(g) > 1 )
                 if ( numel(f) ~= numel(g) )
-                    error('CHEBFUN:plot:dim', ...
+                    error('CHEBFUN:CHEBFUN:plot:dim', ...
                     'CHEBFUN objects must have the same number of columns.');
                 end
                 for k = 1:numel(f)
@@ -179,7 +226,7 @@ while ( ~isempty(varargin) )
             end
         end
 
-    else                                                       % PLOT(f).
+    else  % PLOT(f).
         
         % Remove CHEBFUN from array input:
         f = varargin{1};
@@ -224,28 +271,6 @@ while ( ~isempty(varargin) )
     % Loop over the columns:
     for k = 1:numel(newData)
         
-        % Handle the 'interval' flag:
-        if ( ~isComplex && intervalIsSet && (size(newData(k).xLine, 2) == 1) )
-            ind = newData(k).xLine < interval(1) | ...
-                newData(k).xLine > interval(end);
-            newData(k).xLine(ind) = [];
-            newData(k).yLine(ind,:) = [];
-            ind = newData(k).xPoints < interval(1) | ...
-                newData(k).xPoints > interval(end);
-            newData(k).xPoints(ind) = [];
-            newData(k).yPoints(ind,:) = [];
-            ind = newData(k).xJumps < interval(1) | ...
-                newData(k).xJumps > interval(end);
-            newData(k).xJumps(ind) = [];
-            newData(k).yJumps(ind,:) = [];            
-            ind = newData(k).xDeltas < interval(1) | ...
-                newData(k).xDeltas > interval(end);
-            newData(k).xDeltas(ind) = [];
-            newData(k).yDeltas(ind,:) = [];
-            
-            newData(k).xLim = interval;            
-        end
-        
         % Update axis limits:
         xLim = [min(newData(k).xLim(1), xLim(1)), ...
             max(newData(k).xLim(2), xLim(2))];
@@ -257,22 +282,26 @@ while ( ~isempty(varargin) )
         pointData = [pointData, newData(k).xPoints, newData(k).yPoints, ...
             styleData];
         jumpData = [jumpData, newData(k).xJumps, newData(k).yJumps, styleData];
-        deltaData = [deltaData, newData(k).xDeltas, newData(k).yDeltas];
+        deltaData = [deltaData, newData(k).xDeltas, newData(k).yDeltas, styleData];
+        
+        defaultXLim = defaultXLim & newData(k).defaultXLim;
+        defaultYLim = defaultYLim & newData(k).defaultYLim;
     end
     
-    % If xLim(1) == xLim(2), set xLim [inf -inf] and let Matlab figure out a
-    % proper xLim:
+    % If xLim(1) == xLim(2), let Matlab figure out a proper xLim:
     if ( ~diff(xLim) )
-        xLim = [inf, -inf];
+        defaultXLim = 1;
     end
     
-    % If yLim(1) == yLim(2), set yLim [inf -inf] and let Matlab figure out a
-    % proper yLim:
+    % If yLim(1) == yLim(2), let Matlab figure out a proper yLim:
     if ( ~diff(yLim) )
-        yLim = [inf, -inf];
+        defaultYLim = 1;
     end
     
 end
+
+%% Plotting starts here:
+
 % Plot the lines:
 h1 = plot(lineData{:});
 set(h1, 'Marker', 'none', lineStyle{:})
@@ -284,6 +313,10 @@ hold on
 h2 = plot(pointData{:});
 % Change the style accordingly:
 set(h2, 'LineStyle', 'none', pointStyle{:})
+if ( intervalIsSet )
+    % Markers are meaningless if the 'interval' flag is used.
+    set(h2, 'Marker', 'none', pointStyle{:})
+end
 
 % Plot the jumps:
 if ( isempty(jumpData) || ischar(jumpData{1}) )
@@ -291,66 +324,108 @@ if ( isempty(jumpData) || ischar(jumpData{1}) )
 end
 h3 = plot(jumpData{:});
 % Change the style accordingly:
-if ( isempty(jumpStyle) )
-    if ( isComplex )
-        %[TODO]: The following statement can not be reached:
-        set(h3, 'LineStyle', 'none', 'Marker', 'none')
-    else
-        set(h3, 'LineStyle', ':', 'Marker', 'none')
-    end
-else
+if ( ~isempty(jumpStyle) )
     set(h3, jumpStyle{:});
+end
+if ( ~jumpLineIsSet )
+    if ( isComplex )
+        set(h3, 'LineStyle', 'none') 
+    else
+        set(h3, 'LineStyle', ':')
+    end
+    set(h3, 'Marker', 'none') 
 end
 
 % Plot the Delta functions:
-if ( isempty(deltaData) )
-    deltaData = {[]};
+if ( isempty(deltaData) || ~isnumeric(deltaData{1}) )
+    h4 = stem([]);
+else
+    h4 = mystem(deltaData{:});
 end
-h4 = stem(deltaData{:}, 'd', 'fill');
+if ( ~isempty(deltaStyle) )
+    set(h4, deltaStyle{:});
+end    
 
-%% 
-% Do we want a style for delta functions?
-% if ( isempty(jumpStyle) )
-%     if ( isComplex )
-%         %[TODO]: The following statement can not be reached:
-%         set(h3, 'LineStyle', 'none', 'Marker', 'none')
-%     else
-%         set(h3, 'LineStyle', ':', 'Marker', 'none')
-%     end
-% else
-%     set(h3, jumpStyle{:});
-% end
-% Set the X-limits if appropriate values have been suggested:
-if ( all(isfinite(xLim)) )
-
-    % If holding, then make sure not to shrink the X-limits.
-    if ( holdState )
-        xLim = [min(xLimCurrent(1), xLim(1)), max(xLimCurrent(2), xLim(2))];
-    end
-
-    set(gca, 'xlim', sort(xLim))
+% Plot the dummy data, which includes both line and point style:
+hDummy = plot(lineData{:});
+if ( ~isempty(lineStyle) || ~isempty(pointStyle) )
+    set(hDummy, lineStyle{:}, pointStyle{:});
 end
 
-% Set the Y-limits if appropriate values have been suggested:
-if ( all(isfinite(yLim)) )
+%% Setting xLim and yLim:
 
-    % If holding, then make sure not to shrink the Y-limits.
-    if ( holdState )
-        yLim = [min(yLimCurrent(1), yLim(1)), max(yLimCurrent(2), yLim(2))];
-    end
-
-    set(gca, 'ylim', sort(yLim))
+% If holding, then make sure not to shrink the X-limits.
+if ( holdState )
+    xLim = [min(xLimCurrent(1), xLim(1)), max(xLimCurrent(2), xLim(2))];
+    yLim = [min(yLimCurrent(1), yLim(1)), max(yLimCurrent(2), yLim(2))];
 end
+
+% We always want to set the x-limits. Otherwise, plots like
+%   plot(chebfun(@(x) sin(x), [0 pi])
+% will have extra white space around the ends of the domain, and look ugly.
+set(gca, 'xlim', xLim)
+
+% Set the Y-limits if appropriate values have been suggested, or if we were
+% holding on when we entered this method:
+if ( ~defaultYLim || (holdState && strcmp(yLimModeCurrent, 'manual')) )
+    set(gca, 'ylim', yLim)
+end
+
+%% Misc:
 
 % Return hold state to what it was before:
 if ( ~holdState )
     hold off
 end
 
+% We don't want these guys to be included in LEGEND(), so we turn them off.
+set(h1, 'handlevis', 'off');
+set(h2, 'handlevis', 'off');
+set(h3, 'handlevis', 'off');
+set(h4, 'handlevis', 'off');
+% The dummy plot is invisible, but its handle is visible (for LEGEND).
+set(hDummy, 'handlevis', 'on', 'visible', 'off');     %  ¯\_(o.O)_/¯
+
 % Give an output to the plot handles if requested:
 if ( nargout > 0 )
-    varargout = {h1 ; h2 ; h3 ; h4};
+    varargout = {h1 ; h2 ; h3 ; h4 ; hDummy};
 end
 
 end
 
+function h = mystem(varargin)
+%MYSTEM   Plot multiple STEM plots in one call.
+% We need this because stem doesn't supoprt multiple inputs in the same way
+% PLOT does. An alternative option would be to write our own version of STEM.
+
+h = [];
+j = 1;
+% Separate out each individual plot by looking for two consecutive doubles.
+isDouble = cellfun(@isnumeric, varargin);
+startLoc = [1 find([0 diff(isDouble)] == 1 & [diff(isDouble) 0] == 0) nargin+1];
+for k = 1:numel(startLoc)-1
+    data = varargin(startLoc(k):startLoc(k+1)-1);
+    % Ignore complete NaN data:
+    if ( all(isnan(data{1})) )
+        continue
+    end
+    
+    if ( isnumeric(data{1}) )
+        % Remove mixed NaN data:
+        xData = data{1};
+        yData = data{2};
+        nanIdx = isnan(xData);
+        xData(nanIdx) = [];
+        yData(nanIdx) = [];
+        
+        % merge duplicate delta functions.
+        [yData, xData] = deltafun.mergeColumns(yData.', xData.');
+        data{1} = xData.';
+        data{2} = yData.';
+    end
+    h(j) = stem(data{:}, 'fill');
+    set(h(j), 'ShowBaseLine', 'off')
+    j = j + 1;
+end
+
+end

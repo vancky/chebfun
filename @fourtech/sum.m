@@ -11,7 +11,7 @@ function out = sum(f, dim)
 % See also CUMSUM, DIFF.
 
 % Copyright 2014 by The University of Oxford and The Chebfun Developers. 
-% See http://www.chebfun.org for Chebfun information.
+% See http://www.chebfun.org/ for Chebfun information.
 
 % Get the length of the values:
 n = size(f.values, 1);
@@ -24,6 +24,7 @@ if ( nargin > 1 && dim == 2 )
     vscale = max(abs(f.values), [], 1);
     f.epslevel = sum(f.epslevel.*f.vscale, 2)./vscale;
     f.vscale = vscale;
+    f.isReal = all(f.isReal);
     out = f;
     return
 end
@@ -40,7 +41,7 @@ else
     out = sum(f.values, 1)*(2/n);
 end
 
-% Return a real result if f is real;
+% Return a real result if f is real:
 out(:,f.isReal) = real(out(:,f.isReal));
 
 end

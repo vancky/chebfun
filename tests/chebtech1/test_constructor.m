@@ -60,12 +60,23 @@ catch ME
     pass(6) = strcmp(ME.message, 'Too many NaNs/Infs to handle.');
 end
 
-% Check that things don't crash if pref.minPoints and pref.maxPoints are equal.
+% Check that things don't crash if pref.minSamples and pref.maxLength are equal.
 try
-    pref.minPoints = 8;
-    pref.maxPoints = 8;
+    pref.minSamples = 8;
+    pref.maxLength = 8;
     populate(chebtech1, @sin, [], [], pref);
     pass(7) = true;
 catch
     pass(7) = false;
+end
+
+% Test logical-valued functions:
+f = chebtech1(@(x) x > -2);
+g = chebtech1(1);
+pass(8) = normest(f - g) < f.epslevel;
+
+f = chebtech1(@(x) x < -2);
+g = chebtech1(0);
+pass(9) = normest(f - g) < f.epslevel;
+
 end

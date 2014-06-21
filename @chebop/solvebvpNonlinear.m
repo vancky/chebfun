@@ -30,17 +30,14 @@ errTol   = pref.errTol;
 
 % Did the user request damped or undamped Newton iteration? Start in mode
 % requested (later on, the code can switch between modes).
-prefDamped = pref.damped;
-damped =     prefDamped;
+prefDamping = pref.damping;
+damping =      prefDamping;
 
 % Assign initial guess to u:
 u = u0;
 
 % Initialise the independent variable:
 x = chebfun(@(x) x, N.domain);
-
-% Print info to command window, and/or show plot of progress:
-[displayFig, displayTimer] = displayInfo('init', u0, pref);
 
 % Counter for number of Newton steps taken.
 newtonCounter = 0;
@@ -62,6 +59,9 @@ lambda = 1;
 % Need to subtract the rhs from the residual passed in.
 res = res - rhs;
 
+% Initial estimate of error
+errEst = inf;
+
 % Some initializations of the DAMPINGINFO struct. See 
 %   >> help dampingErrorBased 
 % for discussion of this struct. 
@@ -72,15 +72,19 @@ dampingInfo.lambda =        lambda;
 dampingInfo.lambdaMin =     pref.lambdaMin;
 dampingInfo.newtonCounter = newtonCounter;
 dampingInfo.deltaBar =      [];
-dampingInfo.damped =        damped;
+dampingInfo.damping =       damping;
 dampingInfo.x =             x;
+dampingInfo.giveUp =        0;
+
+linpref = pref;
+linpref.errTol = pref.errTol/10;
 
 % Start the Newton iteration!
 while ( ~terminate )
     
     % Compute a Newton update:
-    [delta, disc] = linsolve(L, res, pref);
-    
+    [delta, disc] = linsolve(L, res, linpref, vscale(u));
+
     % We had two output arguments above, need to negate DELTA.
     delta = -delta;
 
@@ -90,8 +94,23 @@ while ( ~terminate )
     % Assign to the DAMPINGINFO struct:
     dampingInfo.normDelta = normDelta;
     
+    % At the first Newton iteration, we have to do additional checks.
+    if ( newtonCounter == 0)
+        % Did we actually get an initial passed that solves the BVP?
+        if ( normDelta/vscale(u) < errTol/100 )
+            displayInfo('exactInitial', pref);
+            info.error = NaN;
+            info.normDelta = normDelta;
+            return
+        else
+            % We actually have to start the Newton iteration. Print info to
+            % command window, and/or show plot of progress:
+            [displayFig, displayTimer] = displayInfo('init', u0, pref);
+        end
+    end
+    
     % Are we in damped mode?
-    if ( damped )
+    if ( damping )
         
         % Find the next Newton iterate (the method finds the step-size, then
         % takes the damped Newton and returns the next iterate).
@@ -106,10 +125,13 @@ while ( ~terminate )
         cFactor = dampingInfo.cFactor;
         
         % Do we want to keep Newton in damped mode?
-        damped = dampingInfo.damped;
+        damping = dampingInfo.damping;
         
         % Is the damping strategy telling us to give up?
         giveUp = dampingInfo.giveUp;
+        
+        % Did we converge within the damped phase?
+        success = dampingInfo.success;
         
     else % We are in undamped phase
         
@@ -132,13 +154,15 @@ while ( ~terminate )
                 % We're not observing the nice convergence of Newton iteration
                 % anymore. Have to resort back to damped iteration (but only if
                 % the user wanted damped Newton in the first place).
-                damped = prefDamped;
-                continue    % Go back to the start of loop
+                damping = prefDamping;
+                if ( damping ) 
+                    continue    % Go back to the start of loop
+                end
+            else
+                % Error estimate based on the norm of the update and the contraction
+                % factor.
+                errEst =  normDelta / (1 - cFactor^2);
             end
-            
-            % Error estimate based on the norm of the update and the contraction
-            % factor.
-            errEst =  normDelta / (1 - cFactor^2);
         end
         
     end
@@ -158,8 +182,8 @@ while ( ~terminate )
     len = max(cellfun(@length, u.blocks(:)));
     
     % Print info to command window, and/or show plot of progress
-    displayTimer = displayInfo('iter', u, delta, newtonCounter, normDelta, ...
-        cFactor, length(delta{1}), lambda, len, displayFig, ...
+    [displayTimer, stopReq] = displayInfo('iter', u, delta, newtonCounter, ...
+        normDelta, cFactor, length(delta{1}), lambda, len, displayFig, ...
         displayTimer, pref);
     
     if ( errEst < errTol )  
@@ -168,6 +192,11 @@ while ( ~terminate )
     elseif ( newtonCounter > maxIter )
         % Damn, we failed.
         maxIterExceeded = 1;
+    elseif ( stopReq )
+        % User requested to stop the iteration. Generally, this will only happen
+        % in GUI mode.
+        
+        % Do nothing.
     else
         % Linearize around current solution:
         [L, res] = linearize(N, u, x);
@@ -176,8 +205,8 @@ while ( ~terminate )
     end
     
     % Should we stop the Newton iteration?
-    if ( success || maxIterExceeded || giveUp )
-        terminate = 1;
+    if ( success || maxIterExceeded || ( giveUp == 1) || stopReq )
+        break
     end
     
 end
@@ -191,11 +220,11 @@ if ( success )
     displayInfo('final', u, delta, newtonCounter, errEst, errEstBC, ...
         displayFig, displayTimer, pref)
 elseif ( maxIterExceeded )
-    warning('CHEBOP:solvebvpNonlinear:maxIter',...
+    warning('CHEBFUN:CHEBOP:solvebvpNonlinear:maxIter',...
         ['Newton iteration failed. Maximum number of iterations exceeded.\n',...
         'See help cheboppref for how to increase the number of steps allowed.'])
-else
-    warning('CHEBOP:solvebvpNonlinear:notConvergent',...
+elseif ( giveUp )
+    warning('CHEBFUN:CHEBOP:solvebvpNonlinear:notConvergent',...
         ['Newton iteration failed.\n', ...
         'Please try supplying a better initial guess via the .init field \n' ...
         'of the chebop.'])
@@ -220,20 +249,33 @@ function bcNorm = normBCres(N, u, x)
 % Initialize:
 bcNorm = 0;
 
+% If nargin(N) <= 2, but the dimension of the solution guess passed is greater
+% than 1, we are working with the @(x,u) [diff(u{1}) + u{2}; ...] syntax. Need
+% to make the code aware of this.
+if ( nargin(N) <= 2 && max(size(u)) > 1 )
+    cellArg = 1;
+else
+    cellArg = 0;
+end
+
 % Extract the blocks from the CHEBMATRIX U.
 uBlocks = u.blocks;
 
 % Evaluate left boundary condition(s):
 if ( ~isempty(N.lbc) )
     % Evaluate.
-    lbcU = N.lbc(uBlocks{:});
+    if ( cellArg )
+        lbcU = N.lbc(u);
+    else
+        lbcU = N.lbc(uBlocks{:});
+    end
     
     % The output might be a CHEBFUN, or a CHEBMATRIX
     if ( isa(lbcU, 'chebfun') )
         bcNorm = bcNorm + sum(feval(lbcU, N.domain(1)).^2);
     elseif ( isa(lbcU, 'chebmatrix') ) 
         % Loop through the components of LBCU.
-        for k = 1:numel(lbcU)
+        for k = 1:max(size(lbcU))
             % Obtain the kth element of the CHEBMATRIX
             lbcUk = lbcU{k};
             % Evaluate the function at the left endpoint
@@ -245,14 +287,18 @@ end
 % Evaluate right boundary condition(s):
 if ( ~isempty(N.rbc) )
     % Evaluate.
-    rbcU = N.rbc(uBlocks{:});
+    if ( cellArg )
+        rbcU = N.rbc(u);
+    else
+        rbcU = N.rbc(uBlocks{:});
+    end
     
     % The output might be a CHEBFUN, or a CHEBMATRIX
     if ( isa(rbcU, 'chebfun') )
         bcNorm = bcNorm + sum(feval(rbcU, N.domain(end)).^2);
     elseif ( isa(rbcU, 'chebmatrix') ) 
         % Loop through the components of RBCU.
-        for k = 1:numel(rbcU)
+        for k = 1:max(size(rbcU))
             % Obtain the kth element of the CHEBMATRIX
             rbcUk = rbcU{k};
             % Evaluate the function at the left endpoint

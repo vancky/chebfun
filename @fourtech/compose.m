@@ -1,4 +1,4 @@
-function f = compose(f, op, g, pref)
+function f = compose(f, op, g, data, pref)
 %COMPOSE   Composition of FOURTECH objects.
 %   COMPOSE(F, OP) returns a FOURTECH representing OP(F) where F is also a
 %   FOURTECH object, and OP is a function handle.
@@ -11,7 +11,7 @@ function f = compose(f, op, g, pref)
 %   thrown.
 %
 %   COMPOSE(F, OP, G, PREF) or COMPOSE(F, OP, [], PREF) uses the options passed
-%   by the preferences structure PREF to build the returned FOURTECH.  In
+%   by the preferences structure PREF to build the returned FOURTECH. In
 %   particular, one can set PREF.REFINEMENTFUNCTION to be a function which takes
 %   advantage of F and possibly OP or G being FOURTECH objects.
 
@@ -19,10 +19,14 @@ function f = compose(f, op, g, pref)
 % See http://www.chebfun.org/ for Chebfun information.
 
 % Parse inputs:
-if ( nargin < 4 )
+if ( nargin < 5 )
     pref = f.techPref();
 else
     pref = f.techPref(pref);
+end
+
+if ( nargin < 4 )
+    data = struct();
 end
 
 if ( (nargin < 3) || isempty(g) )
@@ -33,7 +37,7 @@ end
 
 % Set some preferences:
 vscale = f.vscale;
-pref.minPoints = max(pref.minPoints, length(f));
+pref.minSamples = max(pref.minSamples, length(f));
 pref.eps = max(pref.eps, f.epslevel);
 pref.sampleTest = false;
 
@@ -45,7 +49,7 @@ if ( nfuns == 2 )
 
     % Grab some data from G2:
     vscale = max(vscale, g.vscale);
-    pref.minPoints = max(pref.minPoints, length(g));
+    pref.minSamples = max(pref.minSamples, length(g));
     pref.eps = max(pref.eps, g.epslevel);
     
 elseif ( isa(op, 'fourtech') )
@@ -61,7 +65,7 @@ elseif ( isa(op, 'fourtech') )
     end
 
     vscale = max(vscale, op.vscale);
-    pref.minPoints = max(pref.minPoints, length(op));
+    pref.minSamples = max(pref.minSamples, length(op));
     pref.eps = max(pref.eps, op.epslevel);
     
 end
@@ -76,7 +80,15 @@ if ( ischar(pref.refinementFunction) )
 end
 
 % Make FOURTECH object:
-f = f.make(op, vscale, f.hscale, pref);
+if ( ~isfield(data, 'vscale') || isempty(data.vscale) )
+    data.vscale = vscale;
+end
+
+if ( ~isfield(data, 'hscale') || isempty(data.hscale) )
+    data.hscale = f.hscale;
+end
+
+f = f.make(op, data, pref);
 f = simplify(f);
 
 % Throw a warning:

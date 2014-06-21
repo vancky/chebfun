@@ -15,7 +15,7 @@ function [g, rJump] = cumsum(f, k, dim)
 % See also SUM
 
 % Copyright 2014 by The University of Oxford and The Chebfun Developers.
-% See http://www.chebfun.org for Chebfun information.
+% See http://www.chebfun.org/ for Chebfun information.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % [TODO]: Document and implement k, dim
@@ -144,7 +144,9 @@ else
                     deltaMag(:, lastIdx) = deltaMag(:, lastIdx)/2;
                 end
                 mk = deltaMag(:, idx);               
-                g{k} = deltafun(fk, mk, lk);
+                data.deltaMag = mk;
+                data.deltaLoc = lk;
+                g{k} = deltafun(fk, data);
             else
                 g{k} = fk;
             end

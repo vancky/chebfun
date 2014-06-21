@@ -2,7 +2,7 @@ function pass = test_get( pref )
 % Test GET.
 
 if ( nargin < 1 ) 
-    pref = chebfun2pref; 
+    pref = chebfunpref; 
 end 
 tol = 1e2 * pref.eps; 
 j = 1; 

@@ -2,7 +2,7 @@ function pass = test_battery( pref )
 % A large battery of functions. 
 
 if ( nargin < 1 ) 
-    pref = chebfun2pref; 
+    pref = chebfunpref; 
 end 
 tol = 1e8 * pref.eps; 
 

@@ -6,7 +6,8 @@ if ( nargin == 0 )
     pref = chebfunpref();
 end
 
-pref.enableBreakpointDetection = true;
+seedRNG(6178);
+pref.splitting = true;
 
 % Some basic test functions:
 FF = {@abs, @(x) abs(x).^5, @(x) abs(sin(10*x)), @(x) abs(sin(30*x))};

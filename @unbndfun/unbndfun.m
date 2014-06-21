@@ -3,31 +3,38 @@ classdef unbndfun < classicfun
 % a semi-infinite interval [-inf b] or [a inf].
 %
 % Constructor inputs:
-%   UNBNDFUN(OP, DOMAIN) constructs an UNBNDFUN object from the function handle
-%   OP by mapping the DOMAIN to [-1 1], and constructing an ONEFUN object to
-%   represent the function prescribed by OP. DOMAIN should be a row vector with
-%   two elements in increasing order and at least one entry of this two-entry
-%   vector should be inf or -inf. OP should be vectorised (i.e., accept a vector
-%   input) and output a vector of the same length as its input.
+%   UNBNDFUN(OP) constructs a UNBNDFUN object from the function handle OP on the
+%   domain determined by the default in CHEBFUNPREF by mapping the domain to
+%   [-1, 1] and constructing a ONEFUN object to represent the function
+%   prescribed by OP.  OP should be vectorised (i.e., accept a vector input)
+%   and output a vector of the same length as its input.
 %
-%   UNBNDFUN(OP, DOMAIN, VSCALE, HSCALE) allows the constructor of the ONEFUN of
-%   the UNBNDFUN to use information about vertical and horizontal scales. If not
-%   given (or given as empty), the VSCALE defaults to 0 initially, and HSCALE
-%   defaults to 1.
+%   UNBNDFUN(OP, DATA) constructs an UNBNDFUN object using the data supplied in
+%   the DATA structure.  DATA fields used by UNBNDFUN are:
+%     DATA.DOMAIN       (Default:  Determined by CHEBFUNPREF)
+%         A row vector with two elements in increasing order defining the
+%         construction domain.  At least one element must be infinite.
+%   In addition, UNBNDFUN may modify the following DATA fields before passing
+%   them on to the ONEFUN constructor:
+%     DATA.HSCALE       (Default:  Determined by DATA.DOMAIN)
+%         Horizontal construction scale.
+%     DATA.EXPONENTS    (Default:  Empty)
+%         Exponents describing the behavior of the function at the endpoints of
+%         the construction domain.  (See SINGFUN.)
+%     DATA.SINGTYPE     (Default:  Empty)
+%         Types of endpoint singularities to search for.  (See SINGFUN.)
+%   If any fields in DATA are empty or not supplied, or if DATA itself is empty
+%   or not supplied, appropriate default values are set.  Any fields in DATA
+%   which are not recognized will be passed as-is to the ONEFUN constructor.
 %
-%   UNBNDFUN(OP, DOMAIN, VSCALE, HSCALE, PREF) overrides the default behavior
-%   with that given by the preference structure PREF. See CHEBFUNPREF.
+%   UNBNDFUN(OP, DATA, PREF) overrides the default behavior with that given by
+%   the preferences in the structure or CHEBFUNPREF object PREF. See
+%   CHEBFUNPREF for details.
 %
-%   UNBNDFUN(VALUES, DOMAIN, VSCALE, HSCALE, PREF) returns a UNBNDFUN object
-%   with a ONEFUN constructed by the data in the columns of VALUES (if supported
-%   by ONEFUN class constructor).
-%
-% See ONEFUN for further documentation of the ONEFUN class.
-%
-% See also FUN, CHEBFUNPREF, ONEFUN.
+% See also CLASSICFUN, CHEBFUNPREF, ONEFUN.
 
 % Copyright 2014 by The University of Oxford and The Chebfun Developers.
-% See http://www.chebfun.org for Chebfun information.
+% See http://www.chebfun.org/ for Chebfun information.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % UNBNDFUN Class Description:
@@ -42,124 +49,101 @@ classdef unbndfun < classicfun
 % meaningful under that circumstance.
 %
 % Class diagram: [<<CLASSICFUN>>] <>-- [<<onefun>>]
-%                    ^
-%                    |
-%                [unbndfun]
+%                       ^
+%                       |
+%                   [unbndfun]
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
-    %% CLASS CONSTRUCTOR:   
-    methods
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %% CLASS CONSTRUCTOR:
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    methods ( Access = public, Static = false )
         
-        function obj = unbndfun(op, domain, vscale, hscale, pref)
+        function obj = unbndfun(op, data, pref)
             
-            % Construct an empty unbndfun
-            if ( (nargin == 0) || isempty(op) )
+            % Parse inputs.
+            if ( (nargin < 1) || isempty(op) )
+                obj.domain = [];
+                obj.mapping = [];
+                obj.onefun = [];
                 return
             end
 
-            % Obtain preferences if none given:
-            if ( (nargin < 5) || isempty(pref))
+            if ( (nargin < 2) || isempty(data) )
+                data = struct();
+            end
+
+            if ( (nargin < 3) || isempty(pref) )
                 pref = chebfunpref();
             else
                 pref = chebfunpref(pref);
             end
-            
-            % Use default domain if none given:
-            if ( (nargin < 2) || isempty(domain) )
-                domain = pref.unbndfun.domain;
-            end
-            
+
+            data = parseDataInputs(data, pref);
+
             % Check domain
-            if ( (nargin < 2) || isempty(domain) )
-                domain = pref.unbndfun.domain;
-            elseif ( ~any(isinf(domain)) )
-                error('CHEBFUN:UNBNDFUN:BoundedDomain',...
+            if ( ~all(size(data.domain) == [1, 2]) || (diff(data.domain) <= 0) )
+                error('CHEBFUN:UNBNDFUN:unbndfun:domain',...
+                    ['Domain argument should be a row vector with two ', ...
+                    'entries in increasing order.']);
+            elseif ( ~any(isinf(data.domain)) )
+                error('CHEBFUN:UNBNDFUN:unbndfun:boundedDomain',...
                     'Domain argument should be unbounded.');
-            elseif ( ~all(size(domain) == [1, 2]) )
-                error('CHEBFUN:UNBNDFUN:domain',...
-                    'Domain argument should be a row vector with two entries.');
-            end
-            
-            % Define scales if none given.
-            if ( (nargin < 3) || isempty(vscale) )
-                vscale = 0;
-            end
-            
-            if ( (nargin < 4) || isempty(hscale) )
-                % The hscale of an unbounded domain is always 1.
-                % [TODO]: Why?
-                hscale = 1;
             end
 
-            unbndmap = unbndfun.createMap(domain);
-            % Include nonlinear mapping from [-1,1] to [a,b] in the op:
+            % Remap the OP to be a function on [-1, 1].
+            unbndmap = unbndfun.createMap(data.domain);
             if ( isa(op, 'function_handle') )
-                op = @(x) op(unbndmap.for(x));
+                op = @(x) op(unbndmap.For(x));
             elseif ( isnumeric(op) )
                 if ( ~any(op(:)) )
-                    op = @(x) zeros(length(x), size(op,2));
+                    op = @(x) zeros(length(x), size(op, 2));
                 else
                     %[TODO]: Implement this.
-                    error('CHEBFUN:UNBNDFUN:inputValues',...
-                        'UNBNDFUN does not support non-zero construction from values.');
+                    error('CHEBFUN:UNBNDFUN:unbndfun:inputValues',...
+                        ['UNBNDFUN does not support non-zero construction ' ...
+                         'from values.']);
                 end
             end
-            
-            % Try to determine if the function is singular:
-            if ( isempty(pref.singPrefs.exponents) )
-                
-                % Test if the function has infinite values at the far field. If
-                % so turn the default 'blowup' mode by assuming the
-                % singularities are poles:
+
+            % Deal with exponents for singular functions.
+            if ( isempty(data.exponents) )
+                % The user hasn't supplied exponents, but functions on
+                % unbounded domains are often singular once remapped to [-1,
+                % 1].  Try to detect this by seeing if the function is infinite
+                % at either endpoint and, if so, enable singularity detection.
                 lVal = feval(op, -1);
                 rVal = feval(op, 1);
                 if ( any(isinf([lVal rVal])) )
-                    singType = pref.singPrefs.defaultSingType;
-                    pref.singPrefs.singType = {singType, singType};
+                    pref.blowup = true;
+                    singType = pref.blowupPrefs.defaultSingType;
+                    data.singType = {singType, singType};
                 end
-            
             else
-                % Preprocess the exponents supplied by the user:
-                
-                % Since the exponents provided by the user are in the sense of
-                % unbounded domain, we need to negate them when the domain of
-                % the original operator/function handle is mapped to [-1 1]
-                % using the forward map, i.e., UNBNDMAP.FOR().
-                ind = isinf(domain);
-                pref.singPrefs.exponents(ind) = -pref.singPrefs.exponents(ind);
-
+                % Remapping to [-1, 1] negates exponents, which are given with
+                % respect to the function on the infinite domain.
+                ind = isinf(data.domain);
+                pref.blowup = true;
+                data.exponents(ind) = -data.exponents(ind);
             end
-            
-            % Call the ONEFUN constructor:
-            obj.onefun = onefun.constructor(op, vscale, hscale, pref);
-            
-            % Add the domain and mapping:
-            obj.domain = domain;
-            obj.mapping = unbndmap;
-            
-        end
 
+            % Call the ONEFUN constructor:
+            obj.onefun = onefun.constructor(op, data, pref);
+
+            % Add the domain and mapping:
+            obj.domain = data.domain;
+            obj.mapping = unbndmap;
+        end
+        
     end
     
-    %% STATIC METHODS IMPLEMENTED BY UNBNDFUN CLASS.
-    methods ( Static = true ) 
-        
-        % Retrieve and modify preferences for this class.
-        prefs = pref(varargin);
-        
-        % Noninear map from [-1, 1] to the domain of the UNBNDFUN.
-        m = createMap(domain);
-        
-        % Make a UNBNDFUN (constructor shortcut):
-        f = make(varargin); 
-        
-    end
-       
-    %% METHODS IMPLEMENTED BY THIS CLASS.
-    methods
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %% CLASS METHODS:
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    methods ( Access = public, Static = false )
         
         % Compose an UNBNDFUN with an operator or another FUN.
-        f = compose(f, op, g, pref)
+        f = compose(f, op, g, data, pref)
         
         % Indefinite integral of an UNBNDFUN.
         [f, rVal] = cumsum(f, dim)
@@ -171,7 +155,7 @@ classdef unbndfun < classicfun
         f = changeMap(f,newdom)
         
         % Evaluate an UNBNDFUN.
-        y = feval(f, x)
+        y = feval(f, x, varargin)
         
         % Flip/reverse an UNBNDFUN object.
         f = flipud(f)
@@ -184,9 +168,6 @@ classdef unbndfun < classicfun
 
         % Right matrix divide for an UNBNDFUN.
         X = mrdivide(B, A)
-        
-        % Estimate the Inf-norm of an UNBNDFUN
-        out = normest(f);
         
         % Data for plotting an UNBNDFUN
         data = plotData(f, g);
@@ -208,5 +189,48 @@ classdef unbndfun < classicfun
         
         % Definite integral of an UNBNDFUN on the its domain.
         out = sum(f, dim)
-    end    
+    end
+    
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %% STATIC METHODS:
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    methods ( Access = public, Static = true ) 
+        
+        % Retrieve and modify preferences for this class.
+        prefs = pref(varargin);
+        
+        % Noninear map from [-1, 1] to the domain of the UNBNDFUN.
+        m = createMap(domain);
+        
+        % Make a UNBNDFUN (constructor shortcut):
+        f = make(varargin); 
+        
+    end
+    
+end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% PRIVATE METHODS IMPLEMENTED IN THIE FILE:
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+function data = parseDataInputs(data, pref)
+%PARSEDATAINPUTS   Parse inputs from the DATA structure and assign defaults.
+
+if ( ~isfield(data, 'domain') || isempty(data.domain) )
+    data.domain = pref.domain;
+end
+
+if ( ~isfield(data, 'hscale') || isempty(data.hscale) )
+    % TODO:  Why is the hscale of an unbounded domain always 1?
+    data.hscale = 1;
+end
+
+if ( ~isfield(data, 'exponents') || isempty(data.exponents) )
+    data.exponents = [];
+end
+
+if ( ~isfield(data, 'singType') || isempty(data.singType) )
+    data.singType = [];
+end
+
 end

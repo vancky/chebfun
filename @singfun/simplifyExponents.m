@@ -4,7 +4,7 @@ function f = simplifyExponents(f)
 %   than 1 by absorbing the integer part of any boundary exponents larger than
 %   1 into its smoothPart.
 %
-%  See also EXTRACTBOUNDARYROOTS.
+% See also EXTRACTBOUNDARYROOTS.
 
 % Copyright 2014 by The University of Oxford and The Chebfun Developers.
 % See http://www.chebfun.org/ for Chebfun information.
@@ -27,7 +27,7 @@ newExps(ind) = exps(ind) - floor(exps(ind));
 pow = exps - newExps;
 
 % Compute the factor from function roots: 
-mult = singfun.constructSmoothPart(@(x) (x+1).^pow(1).*(1-x).^pow(2), [], [], []);
+mult = singfun.constructSmoothPart(@(x) (x+1).^pow(1).*(1-x).^pow(2), [], []);
 f.smoothPart = f.smoothPart.*mult;
 
 % Update the exponents:

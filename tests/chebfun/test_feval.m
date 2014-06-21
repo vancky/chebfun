@@ -17,7 +17,7 @@ fx = feval(f, zeros(0, 4));
 pass(1) = isequal(size(fx), [0 4]);
 
 % Test endpoint evaluation.
-pref.enableBreakpointDetection = 0;
+pref.splitting = 0;
 f = chebfun(@(x) erf(x), [-1 1], pref);
 
 lval1 = feval(f, 'left');
@@ -37,11 +37,11 @@ try
     badval = feval(f, '???');
     pass(4) = false;
 catch ME
-    pass(4) = strcmp(ME.identifier, 'CHEBFUN:feval:strInput');
+    pass(4) = strcmp(ME.identifier, 'CHEBFUN:CHEBFUN:feval:strInput');
 end
 
 % Test evaluation with and without left/right limit values.
-pref.enableBreakpointDetection = 1;
+pref.splitting = 1;
 f = chebfun(@(x) sign(x), [-1 1], pref);
 tol = 10*f.epslevel*f.vscale;
 
@@ -66,36 +66,36 @@ try
     badval = feval(f, x, '???');
     pass(8) = false;
 catch ME
-    pass(8) = strcmp(ME.identifier, 'CHEBFUN:feval:leftrightchar');
+    pass(8) = strcmp(ME.identifier, 'CHEBFUN:CHEBFUN:feval:leftRightChar');
 end
 
 try
     badval = feval(f, x, []);
     pass(9) = false;
 catch ME
-    pass(9) = strcmp(ME.identifier, 'CHEBFUN:feval:leftright');
+    pass(9) = strcmp(ME.identifier, 'CHEBFUN:CHEBFUN:feval:leftRight');
 end
 
 % Spot-check a few functions.
-pref.enableBreakpointDetection = 0;
+pref.splitting = 0;
 f_exact = @(x) exp(x) - 1;
 f = chebfun(f_exact, [-1 1], pref);
 x = xr;
 pass(10) = (norm(feval(f, x) - f_exact(x), inf) < 10*f.epslevel*f.vscale);
 
-pref.enableBreakpointDetection = 1;
+pref.splitting = 1;
 f_exact = @(x) abs(x)./(1 + x.^2);
 f = chebfun(f_exact, [-2 7], pref);
 x = 4.5*xr + 2.5;
 pass(11) = (norm(feval(f, x) - f_exact(x), inf) < 10*f.epslevel*f.vscale);
 
-pref.enableBreakpointDetection = 0;
+pref.splitting = 0;
 f_exact = @(x) cos(1e4*x);
 f = chebfun(f_exact, [1 5], pref);
 x = 2*xr + 3;
 pass(12) = (norm(feval(f, x) - f_exact(x), inf) < 10*f.epslevel*f.vscale);
 
-pref.enableBreakpointDetection = 0;
+pref.splitting = 0;
 z = exp(2*pi*1i/6);
 f_exact = @(t) sinh(t*z);
 f = chebfun(f_exact, [-1 1], pref);
@@ -103,7 +103,7 @@ x = xr;
 pass(13) = (norm(feval(f, x) - f_exact(x), inf) < 10*f.epslevel*f.vscale);
 
 % Check row vector and matrix input.
-pref.enableBreakpointDetection = 0;
+pref.splitting = 0;
 f_exact = @(x) cos(x - 0.2);
 f = chebfun(f_exact, [-1 1], pref);
 
@@ -128,7 +128,7 @@ pass(17) = isequal(size(err), [5 4 5 10]) && (norm(err(:), inf) < ...
     10*f.epslevel*f.vscale);
 
 % Check behavior for transposed chebfuns.
-f.isTransposed = 1; % [TODO]:  Replace with call to transpose().
+f = transpose(f);
 
 err = feval(f, x_mtx) - f_exact(x_mtx).';
 pass(18) = isequal(size(err), [10 100]) && (norm(err(:), inf) < ...
@@ -138,7 +138,7 @@ err = feval(f, x_3mtx) - permute(f_exact(x_3mtx), [2 1 3]);
 pass(19) = isequal(size(err), [20 5 10]) && (norm(err(:), inf) < ...
     10*f.epslevel*f.vscale);
 
-f.isTransposed = 0; % [TODO]:  Replace with call to transpose().
+f = transpose(f);
 
 % Check evaluation at points just outside the domain.
 x = [(-1 - 1e-6) ; 1e-6 + 1e-6i ; (1 + 1e-6)];
@@ -146,7 +146,7 @@ err = feval(f, x.') - f_exact(x.');
 pass(20) = norm(err(:), inf) < 10*f.epslevel*f.vscale;
 
 % Check operation for array-valued chebfuns.
-pref.enableBreakpointDetection = 1;
+pref.splitting = 1;
 f_exact = @(x) [sin(x) abs(x) exp(1i*x)];
 f = chebfun(f_exact, [], pref);
 
@@ -203,9 +203,7 @@ x = diff(dom) * rand(100, 1) + dom(1);
 
 pow = -0.5;
 op = @(x) (x - dom(1)).^pow.*sin(200*x);
-pref.singPrefs.exponents = [pow 0];
-pref.enableBreakpointDetection = 1;
-f = chebfun(op, dom, pref);
+f = chebfun(op, dom, 'exps', [pow 0], 'splitting', 'on');
 fval = feval(f, x);
 vals_exact = feval(op, x);
 err = fval - vals_exact;

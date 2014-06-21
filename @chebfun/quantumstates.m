@@ -31,8 +31,6 @@ function varargout = quantumstates(varargin)
 % See http://www.chebfun.org/ for Chebfun information.
 % Nick Trefethen, January 2012
 
-% TODO: This method requires a test.
-
 %% Parsing of inputs:
 noplot = strcmpi(varargin{nargin}, 'noplot');      % check for no plot
 nargin1 = nargin;                                  % no of input args
@@ -64,7 +62,7 @@ L.op = @(x,u) -h^2*diff(u,2) + V.*u;               % Schroedinger operator
 [U, D] = eigs(L, n, 'sr');                         % compute evals/efuns
 d = diag(D);                                       % vector of evals
 [d, ii] = sort(d);                                 % sort them
-U = extractColumns(U, ii);                    
+U = U(:,ii);                    
 
 %% Outputs:
 if ( nargout == 2 )
@@ -106,11 +104,10 @@ if ( ymax > Vxmax )                              %   at the endpoints,
 end                                              %   plot show this.
 dx = .05*(xmax - xmin); 
 dy = .25*ydiff/max(5, n);
-axis([xmin - dx, xmax + dx, ymin - dy, ymax]), drawnow
 
 % Plot the eigenfunction, lifted by the corresponding eigenvalue:
 W = dy*U;
-W = cheb2cell(W);
+W = num2cell(W);
 for j = 1:n
     umm = minandmax(W{j});
     if ( umm(2) < -umm(1) )
@@ -129,6 +126,9 @@ end
 if ( ymax > Vxmax )
     plot(xmax*[1, 1], [ymax Vxmax], 'k', LW, 2)    
 end
+
+% Set axis:
+axis([xmin - dx, xmax + dx, ymin - dy, ymax]), drawnow
 
 if ( ~holdState )
     % Stop holding:

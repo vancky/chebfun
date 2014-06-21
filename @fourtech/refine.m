@@ -15,9 +15,7 @@ if ( nargin < 2 )
 end
 
 % Grab the refinement function from the preferences:
-% refFunc = pref.refinementFunction;
-% TODO: Implement other options.
-refFunc = 'resampling';
+refFunc = pref.refinementFunction;
 
 % Decide which refinement to use:
 if ( strcmpi(refFunc, 'nested') )
@@ -30,7 +28,6 @@ else
     % User defined refinement function:
     error('CHEBFUN:FOURTECH:refine', ...
           'No user defined refinement options allowed')
-%     [values, giveUp] = refFunc(op, values, pref);
 end
     
 end
@@ -39,8 +36,8 @@ function [values, giveUp] = refineResampling(op, values, pref)
 %REFINERESAMPLING   Default refinement function for resampling scheme.
 
     if ( isempty(values) )
-        % Choose initial n based upon minPoints:
-        n = 2^ceil(log2(pref.minPoints - 1));
+        % Choose initial n based upon minSamples:
+        n = 2^ceil(log2(pref.minSamples - 1));
     else
         % (Approximately) powers of sqrt(2):
         pow = log2(size(values, 1));
@@ -53,17 +50,16 @@ function [values, giveUp] = refineResampling(op, values, pref)
     end
     
     % n is too large:
-    if ( n > pref.maxPoints )
+    if ( n > pref.maxLength )
         giveUp = true;
         return
     else
         giveUp = false;
     end
    
-    % TODO: Allow "first-kind" fourier points.
-    x = fourierpts(n);    
+    % [TODO]: Allow "first-kind" fourier points.
+    x = fourpts(n);    
 
-    % TODO: What if preferences is set to extrapolate?
     % Evaluate the operator:
     values = feval(op, x);
     
@@ -75,7 +71,7 @@ function [values, giveUp] = refineResampling(op, values, pref)
 end
 
 function [values, giveUp] = refineNested(op, values, pref)
-%REFINENESTED  Default refinement function for single ('nested') sampling.
+%REFINENESTED   Default refinement function for single ('nested') sampling.
 
     if ( isempty(values) )
         % The first time we are called, there are no values
@@ -88,22 +84,23 @@ function [values, giveUp] = refineNested(op, values, pref)
         n = 2*size(values, 1);
         
         % n is too large:
-        if ( n > pref.maxPoints )
+        if ( n > pref.maxLength )
             giveUp = true;
             return
         else
             giveUp = false;
         end
         
-        % 2nd-kind Fourier points:
-        x = fourierpts(n);
+        % "2nd-kind" Fourier points:
+        x = fourpts(n);
         % Take every 2nd entry:
-        x = x(2:2:end);
+        x = x(2:2:n);
 
         % Shift the stored values:
         values(1:2:n,:) = values;
         % Compute and insert new ones:
-        values(2:2:end,:) = feval(op, x);
+        values(2:2:n,:) = feval(op, x);
 
     end
+    
 end

@@ -15,9 +15,9 @@ if ( nargin == 1 || isempty(g) )
     % Get the data from the ONEFUN:
     data = plotData(f.onefun);
     
-    % Map the 'x' data using f.mapping.for:
-    data.xLine = f.mapping.for(data.xLine);
-    data.xPoints = f.mapping.for(data.xPoints);
+    % Map the 'x' data using f.mapping.For:
+    data.xLine = f.mapping.For(data.xLine);
+    data.xPoints = f.mapping.For(data.xPoints);
     
     %% Figure out the xlim:
     data.xLim = get(f, 'domain');
@@ -29,21 +29,35 @@ if ( nargin == 1 || isempty(g) )
     % width of the window.
     
     % Center the window at the origin.
-    center = 0;
-    
-    % If the left endpoint is -Inf:
-    if ( isinf(data.xLim(1)) )
-        data.xLim(1) = center - window;
+    if ( all(isinf(data.xLim)) )
+        center = 0;
+        
+        % If the left endpoint is -Inf:
+        if ( isinf(data.xLim(1)) )
+            data.xLim(1) = center - window;
+        end
+        
+        % If the right endpoint is Inf:
+        if ( isinf(data.xLim(2)) )
+            data.xLim(2) = center + window;
+        end
+        
+    elseif ( isinf(data.xLim(1)) )
+        data.xLim(1) = data.xLim(2) - window;
+    else
+        data.xLim(2) = data.xLim(1) + window;
     end
     
-    % If the right endpoint is Inf:
-    if ( isinf(data.xLim(2)) )
-        data.xLim(2) = center + window;
-    end
+    % Get a better yLim:
+    mask = data.xLine > data.xLim(1) & data.xLine < data.xLim(2);
+    data.yLim = [min(data.yLine(mask)) max(data.yLine(mask))];
     
     % Sort out the jumps:
     data.xJumps = [f.domain(1) ; NaN ; f.domain(2)];
     data.yJumps = getJumps(f, data.yLine);
+    
+    % Do not use the yLim chosen by Matlab built-in plot:
+    data.defaultXLim = 0;
     
 end
 

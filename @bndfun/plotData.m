@@ -18,9 +18,9 @@ function data = plotData(f, g, h)
 if ( (nargin == 1) || isempty(g) )
     % PLOT(F):
     data = plotData(f.onefun);
-    % Map the 'x' data using f.mapping.for:
-    data.xLine = f.mapping.for(data.xLine);
-    data.xPoints = f.mapping.for(data.xPoints);
+    % Map the 'x' data using f.mapping.For:
+    data.xLine = f.mapping.For(data.xLine);
+    data.xPoints = f.mapping.For(data.xPoints);
     
     % Sort out the jumps:
     data.xJumps = [f.domain(1) ; NaN ; f.domain(2)];
@@ -36,10 +36,6 @@ elseif ( nargin == 2 )
     % Sort out the jumps:
     data.xJumps = getJumps(f, data.xLine);
     data.yJumps = getJumps(g, data.yLine);
-    
-    % Sort out the xLim: 
-    values = get(f, 'values');
-    data.xLim = [min(values(:)), max(values(:))];
     
 else
     % PLOT(F, G, H):

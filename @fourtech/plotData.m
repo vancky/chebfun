@@ -36,15 +36,18 @@ end
 
 % Get the number of points: (Oversample the wavelength)
 len = max([length(f), length(g), length(h)]);
-npts = min(max(501, round(4*pi*len)), fourtech.techPref().maxPoints);
+npts = min(max(501, round(4*pi*len)), fourtech.techPref().maxLength);
+
 
 % Initialise the output structure:
-data = struct('xLine', [], 'yLine', [], 'xPoints', [], 'yPoints', [], 'yLim', [inf -inf]);
+data = struct('xLine', [], 'yLine', [], 'xPoints', [], 'yPoints', [], ...
+    'yLim', [], 'defaultXLim', 1, 'defaultYLim', 1);
+
 if ( isempty(g) )       
     % PLOT(F):
     
     % Values on oversampled Fourier grid (equally spaced).
-    data.xLine = fourierpts(npts);
+    data.xLine = fourpts(npts);
     tmp = prolong(f, npts);
     data.yLine = tmp.values;
 
@@ -56,6 +59,9 @@ if ( isempty(g) )
         data.yLine = real( data.yLine ); 
         data.yPoints = real(data.yPoints); 
     end
+    
+    % yLim:
+    data.yLim = [min(data.yLine(:)) max(data.yLine(:))];
 
 elseif ( isa(g, 'fourtech') )   
     % PLOT(F, G)
@@ -68,10 +74,10 @@ elseif ( isa(g, 'fourtech') )
     data.fGrid.xPoints = fourtech.fourpts(len);
     
     % Grid data for g:
-    data.gGrid.xLine = fourierpts(npts);
+    data.gGrid.xLine = fourpts(npts);
     % Use the maximum of the lenghts of f, g and h to match the number of
     % values returned:    
-    data.gGrid.xPoints = fourierpts(len);
+    data.gGrid.xPoints = fourpts(len);
     
     % Values on oversampled Fourier grid (equally spaced)
     data.xLine = get(prolong(f, npts), 'values');
@@ -91,14 +97,22 @@ elseif ( isa(g, 'fourtech') )
         data.yPoints = real(data.yPoints);
     end
     
+    % xLim:
+    xdata = [get(f, 'lval'); data.xLine; get(f, 'rval')];
+    data.xLim = [min(xdata(:)) max(xdata(:))];
+    
+    % yLim:
+    ydata = [get(g, 'lval'); data.yLine; get(g, 'rval')];
+    data.yLim = [min(ydata(:)) max(ydata(:))];
+    
     if ( isa(h, 'fourtech') )
         % PLOT3(F, G, H)
         
         % Grid data for h:
-        data.hGrid.xLine = fourierpts(npts);
+        data.hGrid.xLine = fourpts(npts);
         % Use the maximum of the lenghts of f, g and h to match the number of
         % values returned:    
-        data.hGrid.xPoints = fourierpts(len);
+        data.hGrid.xPoints = fourpts(len);
         
          % Values on oversampled uniform grid:
         data.zLine = get(prolong(h, npts), 'values');
@@ -111,8 +125,7 @@ elseif ( isa(g, 'fourtech') )
     end
     
 else
-    error('CHEBFUN:FOURTECH:plotData:DataType', ...
-        'Invalid data types.');
+    error('CHEBFUN:FOURTECH:plotData:DataType', 'Invalid data types.');
 end
 
 end

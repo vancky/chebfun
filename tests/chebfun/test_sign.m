@@ -10,7 +10,7 @@ x = 2 * rand(100, 1) - 1;
 hvsde = @(x) .5*(sign(x) + 1);
 
 %% Simple tests
-pref.enableBreakpointDetection = 0;
+pref.splitting = 0;
 f = chebfun('x.^2', pref);   
 tol = get(f, 'epslevel')*get(f, 'hscale');
 f1 = sign(f);
@@ -43,7 +43,7 @@ g = chebfun(@(x) gHandle1(x), -3:3, pref);
 g1 = sign(g);
 pass(2,1) = length(g1.funs) == 6;
 pass(2,2) = normest(f - g1) < tol;
-pref.enableBreakpointDetection = 1;
+pref.splitting = 1;
 h1 = chebfun(@(x) sign(gHandle1(x)), -3:3, pref);
 pass(2,3) = length(h1.funs) == 6;
 pass(2,4) = normest(f - h1) < 100*tol;
@@ -82,9 +82,7 @@ x = diff(dom) * rand(100, 1) + dom(1);
 
 pow = -0.5;
 op = @(x) (dom(2)-x).^pow.*( sin(10*x).^2 );
-pref.singPrefs.exponents = [0 pow];
-pref.enableBreakpointDetection = 1;
-f = chebfun(op, dom, pref);
+f = chebfun(op, dom, 'exps', [0 pow], 'splitting', 'on');
 s = sign(f);
 pass(6,:) = ( norm(feval(s-1, x), inf) < eps );
 
@@ -98,9 +96,7 @@ x = diff(dom) * rand(100, 1) + dom(1);
 
 pow = -0.5;
 op = @(x) (dom(2)-x).^pow.*exp(2*pi*1i*x);
-pref.singPrefs.exponents = [0 pow];
-pref.enableBreakpointDetection = 1;
-f = chebfun(op, dom, pref);
+f = chebfun(op, dom, 'exps', [0 pow], 'splitting', 'on');
 s = sign(f);
 s_exact = @(x) exp(2*pi*1i*x);
 vals_s = feval(s, x);

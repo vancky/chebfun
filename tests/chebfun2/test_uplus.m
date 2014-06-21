@@ -1,8 +1,8 @@
-function pass = test_basic_uplus( pref ) 
+function pass = test_uplus( pref ) 
 % This tests the basic arithmetic operations on chebfun2 objects.
 
 if ( nargin < 1 ) 
-    pref = chebfun2pref; 
+    pref = chebfunpref; 
 end 
 tol = 1e5 * pref.eps; 
 j = 1;

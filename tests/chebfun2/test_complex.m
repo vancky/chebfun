@@ -2,7 +2,7 @@ function pass = test_complex( pref )
 % Test complex
 
 if ( nargin == 0) 
-    pref = chebfun2pref; 
+    pref = chebfunpref; 
 end
 
 tol = 1000*pref.eps; 

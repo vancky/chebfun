@@ -9,10 +9,10 @@ function varargout = chebpolyval2( f, varargin )
 %   [U, D, V] = CHEBPOLYVAL2(F,M,N) returns the values of F on a M-by-N
 %   Chebyshev tensor grid.
 %
-% See also CHEBPOLY2, CHEBPOLYPLOT2. 
+% See also CHEBCOEFFS2, PLOTCOEFFS2. 
 
 % Copyright 2014 by The University of Oxford and The Chebfun Developers.
-% See http://www.maths.ox.ac.uk/chebfun/ for Chebfun information.
+% See http://www.chebfun.org/ for Chebfun information.
 
 % Empty check. 
 if ( isempty( f ) )
@@ -24,7 +24,7 @@ if ( nargin == 1 )
     % Get degrees:
     [m, n] = length( f );  
 elseif ( nargin == 2 ) 
-    error('CHEBFUN2:CHEBPOLYVAL2:INPUTS', 'Dimension not specified.'); 
+    error('CHEBFUN:CHEBFUN2:chebpolyval2:inputs', 'Dimension not specified.'); 
 else
     m = varargin{ 1 }; 
     n = varargin{ 2 }; 
@@ -33,13 +33,10 @@ end
 % Get the low rank representation for f. 
 [cols, d, rows] = cdr(f);
 
-% Evaluate the columns / rows
-C = resize( chebpoly( cols ).', n );
-R = resize( chebpoly( rows ).', m );
+tech = chebfunpref().tech(); 
 
-% Convert these values to coefficients.
-C = chebtech2.coeffs2vals( C );
-R = chebtech2.coeffs2vals( R );
+C = tech.coeffs2vals(chebcoeffs( cols, n ).'); 
+R = tech.coeffs2vals(chebcoeffs( rows, m ).'); 
 
 % Evaluate: 
 if ( nargout <= 1 )
@@ -48,21 +45,4 @@ else
     varargout = {C , d, R}; 
 end
     
-
-end
-
-function X = resize( X, N )
-% Resize the matrix to have length N.
-    
-% Get size:
-[mX, nX] = size( X ); 
-
-if ( mX > N ) 
-    % Truncate:
-    X = X((end-N+1):end, :); 
-else
-    % Pad:
-    X = [zeros(N - mX, nX) ; X]; 
-end
-
 end

@@ -18,7 +18,7 @@ end
 
 % Check if s is actually a subinterval:
 if ( (s(1) < -1) || (s(end) > 1) || (any(diff(s) <= 0)) )
-    error('CHEBFUN:SINGFUN:restrict:badinterval', 'Not a valid interval.')
+    error('CHEBFUN:SINGFUN:restrict:badInterval', 'Not a valid interval.')
 elseif ( (numel(s) == 2) && all(s == [-1, 1]) )
     % Nothing to do here!
     return
@@ -108,7 +108,9 @@ for j = 1:numInts
     op = @(x) feval(f, ((1 - x)*s(j) + (1 + x)*s(j+1))/2);
     
     % Call the smoothfun constructor
-    gtmp = smoothfun.constructor(op, [], 1);
+    data.vscale = [];
+    data.hscale = 1;
+    gtmp = smoothfun.constructor(op, data);
     
     % Put in cell:
     g{j} = gtmp;

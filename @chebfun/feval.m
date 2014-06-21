@@ -22,7 +22,7 @@ function out = feval(F, x, varargin)
 % See also SUBSREF.
 
 % Copyright 2014 by The University of Oxford and The Chebfun Developers.
-% See http://www.chebfun.org for Chebfun information.
+% See http://www.chebfun.org/ for Chebfun information.
 
 % If F or x are empty, there's nothing to do.
 if ( isempty(F) )
@@ -42,12 +42,14 @@ end
 %% LEFT / RIGHT VALUES:
 % Support for feval(f, 'left') and feval(f, 'end'), etc.
 if ( ischar(x) )
+    dom = F.domain;
     if ( any(strcmpi(x, {'left', 'start' ,'-'})) )
-        out = get(F, 'lval');
+        out = feval(F, dom(1));
     elseif ( any(strcmpi(x, {'right', 'end', '+'})) )
-        out = get(F, 'rval');
+        out = feval(F, dom(end));
     else
-        error('CHEBFUN:feval:strInput', 'Unknown input argument "%s".', x);
+        error('CHEBFUN:CHEBFUN:feval:strInput', ...
+            'Unknown input argument "%s".', x);
     end
     return
 end
@@ -88,25 +90,16 @@ dom = f.domain;
 
 %% LEFT AND RIGHT LIMITS:
 % Deal with feval(f, x, 'left') and feval(f, x, 'right'):
+lrFlag = zeros(1, 4);
 if ( nargin > 2 )
     lr = varargin{1};
     lrFlag = strcmpi(lr, {'left', 'right', '-', '+'});
     if ( ~any(lrFlag) )
         if ( ischar(lr) )
-            error('CHEBFUN:feval:leftrightchar',...
+            error('CHEBFUN:CHEBFUN:feval:leftRightChar',...
                 'Unknown input argument "%s".', lr);
         else
-            error('CHEBFUN:feval:leftright', 'Unknown input argument.');
-        end
-    end
-    % We deal with this by reassigning imps to be left/right values.
-    if ( lrFlag(1) || lrFlag(3) ) % left
-        for j = 1:numFuns
-            f.pointValues(j+1,:) = get(funs{j}, 'rval');
-        end
-    elseif ( lrFlag(2) || lrFlag(4) ) % right
-        for j = 1:numFuns
-            f.pointValues(j,:) = get(funs{j}, 'lval');
+            error('CHEBFUN:CHEBFUN:feval:leftRight', 'Unknown input argument.');
         end
     end
 end
@@ -117,7 +110,7 @@ end
 xReal = real(x);
 I = xReal < dom(1);
 if ( any(I(:)) )
-    out(I,:) = feval(funs{1}, x(I));
+    out(I,:) = feval(funs{1}, x(I), varargin{:});
 end
 
 % Points within the domain:
@@ -125,14 +118,14 @@ for k = 1:numFuns
     I = ( xReal >= dom(k) ) & ( xReal < dom(k+1) );
     if ( any(I(:)) )
         % Evaluate the appropriate fun:
-        out(I,:) = feval(funs{k}, x(I));
+        out(I,:) = feval(funs{k}, x(I), varargin{:});
     end
 end
 
 % Points to the right of the domain:
 I = ( xReal >= dom(end) );
 if ( any(I(:)) )
-    out(I,:) =  feval(funs{end}, x(I));
+    out(I,:) =  feval(funs{end}, x(I), varargin{:});
 end
 
 %% POINTVALUES:
@@ -143,11 +136,21 @@ end
 for k = 1:numFuns + 1
     index = x == dom(k);
     if ( any(index) )
+        % If a left or right flag has been passed, we reassign pointValues 
+        % to be left/right values.
+        if ( lrFlag(1) || lrFlag(3) ) % left
+            for j = 1:numFuns
+                f.pointValues(j+1,:) = get(funs{j}, 'rval');
+            end
+        elseif ( lrFlag(2) || lrFlag(4) ) % right
+            for j = 1:numFuns
+                f.pointValues(j,:) = get(funs{j}, 'lval');
+            end
+        end
         pointValues = repmat(f.pointValues(k,:), sum(index), 1);
         out(index,:) = pointValues;
     end
 end
-    
 
 %% RESHAPE FOR OUTPUT:
 % Reshape fx, which is a column vector or horizontal concatenation of column

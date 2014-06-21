@@ -1,3 +1,4 @@
+function f = populate(f, op, vscale, hscale, pref)
 %POPULATE   Populate a FOURTECH class with values.
 %   F = F.POPULATE(OP) returns a FOURTECH representation populated with values
 %   F.VALUES of the function OP evaluated on an equally spaced grid. The fields
@@ -30,7 +31,6 @@
 
 % Copyright 2014 by The University of Oxford and The Chebfun Developers. 
 % See http://www.chebfun.org/ for Chebfun information.
-function f = populate(f, op, vscale, hscale, pref)
 
 if ( (nargin < 3) || isempty(vscale) )
     vscale = 0;
@@ -71,7 +71,7 @@ if ( isnumeric(op) || iscell(op) )
     f.epslevel = f.epslevel./vscale;
 
     % Threshold to determine if f is real or not.
-    f.isReal = max(abs(imag( f.values ))) < 2*(f.epslevel.*f.vscale);
+    f.isReal = max(abs(imag( f.values ))) <= 2*(f.epslevel.*f.vscale);
     f.values(:,f.isReal) = real(f.values(:,f.isReal));
 
     return
@@ -81,10 +81,16 @@ end
 
 % Initialise empty values to pass to refine:
 f.values = [];
-% Check a random value of op in (-1,1) to see if the result is complex.
+% Check a random value of op in (-1,1) to see if the result is complex and
+% if the value is a NaN or Inf.
 rndval = feval(op,(2*rand-1));
+
+if any(isnan(rndval)) || any(isinf(rndval))
+    error('CHEBFUN:FOURTECH:populate:isNan','Cannot handle functions that evaluate to Inf or NaN.');
+end
+
 f.isReal = false(size(rndval));
-for k=1:numel(rndval)
+for k = 1:numel(rndval)
     f.isReal(k) = isreal(rndval(k));
 end
 
@@ -110,7 +116,7 @@ while ( 1 )
     % Check for happiness:
     f.coeffs = coeffs;
     f.vscale = vscale;
-    [ishappy, epslevel, cutoff] = happinessCheck(f, f.values, op, pref); 
+    [ishappy, epslevel, cutoff] = happinessCheck(f, op, f.values, pref);
         
     % We're happy! :)
     if ( ishappy ) 
@@ -131,15 +137,6 @@ vscaleGlobal = max(vscale, vscaleOut);
 vscale = vscaleOut;
 
 % Adjust the epslevel appropriately:
-% if ( any(vscaleOut > 0) )
-%     epslevel = epslevel*vscaleGlobal./vscaleOut;
-% else 
-%     % Deal with zero vscale:
-%     epslevel = epslevel./(1+vscaleOut);
-% end
-% vscaleOut(vscaleOut < epslevel) = 1;
-% epslevel = epslevel.*vscaleGlobal./vscaleOut;
-% Adjust the epslevel appropriately:
 ind = vscaleOut < epslevel;
 vscaleOut(ind) = epslevel(ind);
 ind = vscaleGlobal < epslevel;
@@ -157,11 +154,9 @@ f.values(:,f.isReal) = real(f.values(:,f.isReal));
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Ouput. %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Ouput. %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
 if ( ishappy )
     % We're done, and can return.
-    f = simplify(f, f.epslevel);
+    f = simplify(f, f.epslevel/2);
 end
 
 end

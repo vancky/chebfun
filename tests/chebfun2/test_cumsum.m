@@ -1,7 +1,7 @@
 function pass = test_cumsum( pref )
 
 if ( nargin == 0 )
-    pref = chebfun2pref; 
+    pref = chebfunpref; 
 end
 
 tol = 100*pref.eps; 

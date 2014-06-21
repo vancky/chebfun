@@ -26,13 +26,14 @@ function varargout = chebellipseplot(u, varargin)
 %       chebellipseplot(u, sqrt(eps), '--');
 
 % Copyright 2014 by The University of Oxford and The Chebfun Developers.
-% See http://www.maths.ox.ac.uk/chebfun/ for Chebfun information.
+% See http://www.chebfun.org/ for Chebfun information.
 
 %%
 
 if ( numColumns(u) > 1 )
-    error('CHEBFUN:chebellipseplot:quasi', ['CHEBELLPISEPLOT does not ', ... 
-        'support array-valued CHEBFUN objects or quasimatries.']);
+    error('CHEBFUN:CHEBFUN:chebellipseplot:quasi', ...
+        ['CHEBELLPISEPLOT does not support array-valued CHEBFUN objects ' ...
+         'or quasimatries.']);
 end
 
 if ( isempty(u) )
@@ -52,6 +53,8 @@ u = simplify(u);
 if ( isnan(ee) )
     ee = epslevel(u);
 end
+[lineStyle, pointStyle, jumpStyle, deltaStyle, args] = ...
+    chebfun.parsePlotStyle(args{:});
 
 % If k==0 (as by default), we will plot all funs.
 if ( k == 0 )
@@ -65,7 +68,7 @@ end
 
 % Error if index exceeds dimensions.
 if ( any(k > length(u.funs)) )
-    error( 'CHEBFUN:chebellipseplot:outOfBounds', ...
+    error( 'CHEBFUN:CHEBFUN:chebellipseplot:outOfBounds', ...
         'Input chebfun has only %d pieces', length(u.funs) );
 end
 
@@ -85,7 +88,7 @@ end
 holdState = ishold();
 
 % Plot the ellipses.
-h = plot(UK{:}); 
+h = plot(UK{:}, lineStyle{:}); 
 hold on
 
 % Add the legend.
@@ -95,8 +98,8 @@ end
 
 % Plot the interval (with ticks).
 dom = u.domain;
-h2 = plot(dom, 0*dom, args{:});
-set(h2, 'color', [0 0 0], 'marker', '+');
+h2 = plot(dom, 0*dom, args{:}, lineStyle{:}, pointStyle{:});
+set(h2, 'color', [0 0 0], 'marker', '+', 'LineStyle', '-');
 h = [h ; h2];
 
 if ( ~holdState )

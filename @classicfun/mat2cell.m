@@ -39,7 +39,7 @@ end
 
 % Check dimensions:
 if ( ~isscalar(M) || M ~= 1)
-    error('CHEBFUN:FUN:CLASSICFUN:mat2cell:size', ...
+    error('CHEBFUN:CLASSICFUN:mat2cell:size', ...
         ['Input arguments, M and N, must sum to each dimension of the', ...
         ' input size, [1,%d].'], size(f.onefun, 2));
 end
@@ -53,7 +53,8 @@ g = cell(1, numel(N));
 % Append the data to the new entries in the cell:
 for k = 1:numel(N)
     % Create a new CLASSICFUN from the ONEFUN and the domain:
-    g{k} = f.make(oneFuns{k}, f.domain);
+    data.domain = f.domain;
+    g{k} = f.make(oneFuns{k}, data);
 end
 
 end

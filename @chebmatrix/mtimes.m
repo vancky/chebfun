@@ -8,18 +8,22 @@ function C = mtimes(A, B)
 
 % Scalar operand is scalar*identity. But it's faster to interpret it as a
 % special case. 
+
 if ( isnumeric(A) && (numel(A)==1) )  
-    C = scalartimes(B, A);
+    C = scalarTimes(B, A);
     
 elseif ( isnumeric(B) && (numel(B)==1) )
-    C = scalartimes(A, B);
+    C = scalarTimes(A, B);
     
+elseif ( isnumeric(B) )
+    C = matrixTimes(A, B);
+
 else
     % Ensure both A and B are CHEBMATRICES so that we can compare blocks:
     if ( ~isa(A, 'chebmatrix') )
-        A = chebmatrix({A});
+        A = chebmatrix(A);
     elseif ( ~isa(B, 'chebmatrix') )
-        B = chebmatrix({B});
+        B = chebmatrix(B);
     end
     
     % Setup before we can start composition:
@@ -28,7 +32,8 @@ else
     Bdata = B.blocks;
     [nB, p] = size(B);
     if ( n ~= nB )
-        error('Operand inner dimensions must agree.')
+        error('CHEBFUN:CHEBMATRIX:mtimes:dims', ...
+            'Operand inner dimensions must agree.')
     end
     
     C = cell(m, p);    
@@ -48,10 +53,10 @@ else
     C = chebmatrix(C);
     
 end
-
+    
 end
 
-function C = scalartimes(A, z)
+function C = scalarTimes(A, z)
 %SCALARTIMES   Multiplying blocks in a CHEBMATRIX with a scalar.
 [m, n] = size(A);
 C = cell(m, n);
@@ -61,4 +66,27 @@ for i = 1:m
     end
 end
 C = chebmatrix(C);
+end
+
+function C = matrixTimes(A, B)
+%MATRIXTIMES   Multiply CHEBMATRIX * matrix (or vector).
+
+% All the row-entries of A must be of the same type, so we HORZCAT. This is much
+% much much faster than converting a matrix to a CHEBMATRIX and looping over all
+% the block entries.
+m = size(A,1); 
+C = cell(m, size(B,2));
+for k = 1:m
+    tmp = horzcat(A.blocks{k,:}); % Horzcat
+    if ( isa(tmp, 'chebfun') )    % Use array-valued if possible
+        tmp = quasi2cheb(tmp);    % Since we're adding, all breaks
+    end                           % will eventually be the same. 
+    if ( isvector(B) )
+        C(k) = tmp*B;             % Avoid num2cell call.
+    else
+        C(k,:) = num2cell(tmp*B);
+    end
+end
+% Convert cell to CHEBMATRIX for ouput:
+C = chebmatrix(C);  
 end

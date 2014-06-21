@@ -1,7 +1,7 @@
 function  [ishappy, epslevel, cutoff] = happinessCheck(f, op, values, pref)
 %HAPPINESSCHECK   Happiness test for a FOURTECH
 %
-% See also CLASSICCHECK, LOOSECHECK, STRICTCHECK, SAMPLETEST.
+% See also CLASSICCHECK, SAMPLETEST.
 
 % Copyright 2014 by The University of Oxford and The Chebfun Developers. 
 % See http://www.chebfun.org/ for Chebfun information.
@@ -13,8 +13,10 @@ if ( nargin == 1 )
 elseif ( (nargin == 2) && isstruct(op) )
     pref = op;
     op = [];
-elseif ( nargin < 3 )
+elseif ( nargin < 4 )
     pref = f.techPref();
+elseif ( nargin == 3 ) 
+    pref = f.techPref(); 
 end
 
 % What does happiness mean to you?
@@ -25,12 +27,10 @@ if ( strcmpi(pref.happinessCheck, 'classic') )
     [ishappy, epslevel, cutoff] = classicCheck(f, pref);
 
 elseif ( strcmpi(pref.happinessCheck, 'strict') )
-    % Use the 'strict' happiness check:
-    [ishappy, epslevel, cutoff] = strictCheck(f, pref);
+    error('CHEBFUN:FOURTECH:happinessCheck:strictCheck','Strict check not implemented for FOURTECH.  Please use classic check.');
     
 elseif ( strcmpi(pref.happinessCheck, 'loose') )
-    % Use the 'loose' happiness check:
-    [ishappy, epslevel, cutoff] = looseCheck(f, pref);
+    error('CHEBFUN:FOURTECH:happinessCheck:looseCheck','Loose check not implemented for FOURTECH.  Please use classic check.');
     
 else
     % Call a user-defined happiness check:

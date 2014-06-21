@@ -83,8 +83,7 @@ x = diff(dom) * rand(100, 1) + dom(1);
 
 pow = -1.64;
 op = @(x) (x-dom(1)).^pow;
-pref.singPrefs.exponents = [pow 0];
-f = chebfun(op, dom, pref);
+f = chebfun(op, dom, 'exps', [pow 0]);
 g = cumsum(f);
 vals_g = feval(g, x); 
 g_exact = @(x) (x-dom(1)).^(pow+1)./(pow+1);
@@ -109,9 +108,9 @@ opi = {opi1, opi2, opi3};
 f = chebfun(op, dom, 'exps', [0 0 -0.5 0 0 0]);
 
 % We temporarily disable this warning: 
-warning('off', 'CHEBFUN:SINGFUN:plus');
+warning('off', 'CHEBFUN:SINGFUN:plus:exponentDiff');
 g = cumsum(f);
-warning('on', 'CHEBFUN:SINGFUN:plus');
+warning('on', 'CHEBFUN:SINGFUN:plus:exponentDiff');
 
 % check values:
 result = zeros(1,3);
@@ -139,9 +138,9 @@ domCheck = [dom(1)+0.1 dom(2)-0.1];
 op = @(x) sin(100*x)./((x-dom(1)).^0.5.*(x-dom(2)).^0.5);
 f = chebfun(op, dom, 'exps', [-0.5 -0.5]);
 % We temporarily disable this warning: 1
-warning('off', 'CHEBFUN:SINGFUN:plus');
+warning('off', 'CHEBFUN:SINGFUN:plus:exponentDiff');
 g = cumsum(f);
-warning('on', 'CHEBFUN:SINGFUN:plus');
+warning('on', 'CHEBFUN:SINGFUN:plus:exponentDiff');
 
 %%
 % check values:
@@ -193,15 +192,14 @@ x = diff(domCheck) * rand(100, 1) + domCheck(1);
 
 % Blow-up function:
 op = @(x) 5*x;
-pref.singPrefs.exponents = [0 1];
-f = unbndfun(op, dom, [], [], pref);
+f = chebfun(op, dom, 'exps', [0 1]);
 g = cumsum(f);
 gVals = feval(g, x);
 
 opg = @(x) 5*x.^2/2 - 5/2 + get(g, 'lval');
 gExact = opg(x);
 err = norm(gVals - gExact, inf);
-tol = 20*get(g,'epslevel').*get(g,'vscale');
+tol = 100*get(g,'epslevel').*get(g,'vscale');
 pass(14) = err < tol;
 
 %% Piecewise function on [-inf b]:
@@ -227,7 +225,7 @@ g1Exact = opg1(x1);
 g2Exact = opg2(x2);
 err1 = g1Vals - g1Exact;
 err2 = g2Vals - g2Exact;
-pass(15) = norm([err1 ; err2], inf) < 5e3*get(g,'epslevel').*get(g,'vscale');
+pass(15) = norm([err1 ; err2], inf) < 5e4*get(g,'epslevel').*get(g,'vscale');
 
 % [TODO]:  Check fractional antiderivatives once implemented.
 

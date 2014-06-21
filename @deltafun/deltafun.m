@@ -12,30 +12,37 @@ classdef (InferiorClasses = {?bndfun, ?unbndfun}) deltafun < fun
 %   the location of a column in the DELTAMAG matrix.
 %
 % Constructor inputs:
-%   DELTAFUN([], DELTAMAG, LOCATION) creates a DELTAFUN object with an empty
-%   FUNPART, while the delta functions and their locations are specified by
-%   DELTAMAG and LOCATION.
-% 
-%   DELTAFUN(FUNPART, DELTAMAG, LOCATION) creates a DELTAFUN object with
-%   FUNPART as its smooth function, while DELTAMAG and LOCATION specify the
-%   delta functions in this object.
+%   DELTAFUN([], DATA) creates a DELTAFUN object with an empty FUNPART, with
+%   the delta functions and their locations specified by the following fields in
+%   the DATA structure:
+%     DATA.DELTAMAG    (Default:  Empty)
+%         Delta function magnitude matrix.  (See description above.)
+%     DATA.DELTALOC    (Default:  Empty)
+%         Row vector of locations of delta functions.
 %
-%   DELTAFUN(FUNPART, DELTAMAG, LOCATION, PREF) is the same as above but
-%   uses PREF to pass any preferences.
+%   DELTAFUN(FUNPART, DATA) creates a DELTAFUN object with FUNPART as its
+%   smooth function, while the locations and magnitudes of the delta functions
+%   are specified by the DATA structure as above.
 %
-%   DELTAFUN(OP, DELTAMAG, LOCATION, VARARGIN) will call the CLASSICFUN
-%   constructor to create a FUNPART out of the operator OP. THe additional
-%   inputs in VARARGIN are also passed to the CLASSICFUN constructor.
+%   DELTAFUN(FUNPART, DATA, PREF) is the same as above but uses PREF to pass
+%   any preferences.
 %
-%   DELTAFUN(F, ...) where F is a DELTAFUN simlpy returns F, i.e., other 
-%   inputs are ignored.
+%   DELTAFUN(OP, DATA, PREF) will call the CLASSICFUN constructor to create a
+%   FUNPART out of the operator OP.  Fields in DATA which are not among those
+%   listed above as recognized by DELTAFUN will be passed to the CLASSICFUN
+%   constructor as-is.
+%
+%   DELTAFUN(F, ...) where F is a DELTAFUN simply returns F, i.e., other inputs
+%   are ignored.
 %
 % See also CLASSICFUN, ONEFUN, FUN
 
 % Copyright 2014 by The University of Oxford and The Chebfun Developers.
 % See http://www.chebfun.org/ for Chebfun information.
 
-    %% Properties of DELTAFUN objects
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %% CLASS PROPERTIES:
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     properties ( Access = public )
         
         % Smooth part of the representation.
@@ -52,81 +59,88 @@ classdef (InferiorClasses = {?bndfun, ?unbndfun}) deltafun < fun
         
     end
     
-    %% DELTAFUN CLASS CONSTRUCTOR:
-    methods ( Static = true )
-        function obj = deltafun(op, deltaMag, deltaLoc, varargin)
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %% CLASS CONSTRUCTOR:
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    methods ( Access = public, Static = true )
+        
+        function obj = deltafun(op, data, pref)
             
-            isPref = find(cellfun(@(p) isa(p, 'chebfunpref'), varargin));
-            if ( any(isPref) )
-                % Merge if some preferences are given.
-                pref = chebfunpref(varargin{isPref(1)});
-            else
-                % Obtain preferences if none given:
-                pref = chebfunpref();
-            end
-
-            % Case 0: No input arguments, return an empty object.
-            if ( nargin == 0 )
+            % Parse inputs.
+            if ( (nargin <= 0) || isempty(op) )
+                obj.funPart = [];
+                obj.deltaMag = [];
+                obj.deltaLoc = [];
                 return
             end
-            
-            % Case 1: We at least have an OP:
+
+            if ( (nargin < 2) || isempty(data) )
+                data = struct();
+            end
+
+            if ( (nargin < 3) || isempty(pref) )
+                pref = chebfunpref();
+            else
+                pref = chebfunpref(pref);
+            end
+
+            data = parseDataInputs(data, pref);
+
+            % Given a DELTAFUN, return it.
             if ( isa(op, 'deltafun') )
                 obj = op;
                 return
-            elseif ( ~isa(op, 'classicfun') )
-                op = classicfun.constructor(op, varargin);
+            end
+
+            % Assemble the funPart.
+            if ( ~isa(op, 'classicfun') )
+                op = classicfun.constructor(op, data, pref);
             end
             obj.funPart = op;
-            
-            if ( nargin == 1 )
-                return
-            end
-            
-            % Case 2: Two input arguments -  This is not allowed!
-            if ( nargin == 2 )
-                error( 'DELTAFUN:ctor', 'Not enough input arguments.' );
-            end
-            
-            % Case 3: Three or more input arguments:        
-            
-            % If one of deltaMag or deltaLoc is empty, make both empty:
-            if ( xor(isempty(deltaMag), isempty(deltaLoc)) )
-                warning('Inconsistent deltaLoc and deltaMag.')
-                deltaMag = [];
-                deltaLoc = [];  
-                % Nothing else to do:
-                return
-            end            
-            
-            % Make sure location is a row vector:
-            if ( ~isempty(deltaLoc) )
-                if ( min(size(deltaLoc)) > 1 )
-                    error('DELTAFUN:dim', 'deltaLoc should be a vector.');
+
+            % If there is no delta function information, we're done.
+            if ( isempty(data.deltaMag) || isempty(data.deltaLoc) )
+                if ( xor(isempty(data.deltaMag), isempty(data.deltaLoc)) )
+                    warning('CHEBFUN:DELTAFUN:inconsistentData', ...
+                        'Inconsistent deltaLoc and deltaMag.')
                 end
-                deltaLoc = deltaLoc(:).';
+
+                obj.deltaMag = [];
+                obj.deltaLoc = [];
+                return
             end
-            
+
+            % Make sure location is a row vector.
+            if ( ~isempty(data.deltaLoc) )
+                if ( min(size(data.deltaLoc)) > 1 )
+                    error('CHEBFUN:DELTAFUN:deltafun:dim', ...
+                        'deltaLoc should be a vector.');
+                end
+                data.deltaLoc = data.deltaLoc(:).';
+            end
+
             % Check sizes:
-            if ( ~isempty(deltaMag) && ( size(deltaMag, 2) ~= length(deltaLoc) ) )
-                error('CHEBFUN:deltafun:dim', ...
+            if ( ~isempty(data.deltaMag) && ...
+                    (size(data.deltaMag, 2) ~= length(data.deltaLoc)) )
+                error('CHEBFUN:DELTAFUN:deltafun:dim', ...
                     ['Impulse matrix (deltaMag) should have the same number' ...
                      ' of columns as locations (deltaLoc).']);
-            end                         
-      
+            end
+
             % Locations of delta functions should be within the domain:
-            if ( ~isempty(deltaLoc) && ~isempty(obj.funPart) )
+            if ( ~isempty(data.deltaLoc) && ~isempty(obj.funPart) )
                 dom = obj.funPart.domain;
-                if ( (max(deltaLoc) > dom(2)) || (min(deltaLoc) < dom(1)) )
-                    error('CHEBFUN:deltafun:domain', ...
+                if ( (max(data.deltaLoc) > dom(2)) || ...
+                     (min(data.deltaLoc) < dom(1)) )
+                    error('CHEBFUN:DELTAFUN:deltafun:domain', ...
                         'Location of a delta fun is outside the domain.');
                 end
             end
-            
+
             % All checks done, assign inputs to the current object:
-            obj.deltaMag = deltaMag;
-            obj.deltaLoc = deltaLoc;
-                                
+            obj.deltaMag = data.deltaMag;
+            obj.deltaLoc = data.deltaLoc;
+
             % Simplify to merge redundant delta functions:
             obj = simplifyDeltas(obj, pref);
             if ( ~isa(obj, 'deltafun') )
@@ -134,22 +148,24 @@ classdef (InferiorClasses = {?bndfun, ?unbndfun}) deltafun < fun
             end
             
         end
+        
     end
     
-    
-    %% METHODS IMPLEMENTED BY THIS CLASS.
-    methods
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    
+    %% CLASS METHODS:
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    methods ( Access = public, Static = false )
         
         % True if the DELTAFUN object has no delta functions       
         out = anyDelta(f)
 
         % Compose a DELTAFUN with an affine operator or another DELTAFUN
-        f = compose(f, op, g, pref)
+        f = compose(f, op, g, data, pref)
         
         % Complex conjugate of a DELTAFUN.
         f = conj(f)
         
-        % DELTAFUN obects are not transposable.
+        % DELTAFUN obects are not tCOLLOC2ransposable.
         f = ctranspose(f)
         
         % Indefinite integral of a DELTAFUN.
@@ -162,7 +178,7 @@ classdef (InferiorClasses = {?bndfun, ?unbndfun}) deltafun < fun
         f = diff(f, k)
                 
         % Evaluate a DELTAFUN.
-        y = feval(f, x)
+        y = feval(f, x, varargin)
         
         % Flip columns of an array-valued DELTAFUN object.
         f = fliplr(f)
@@ -203,6 +219,9 @@ classdef (InferiorClasses = {?bndfun, ?unbndfun}) deltafun < fun
         % Length of a DELTAFUN.
         len = length(f)
         
+        % Wrap a cell around a single DELTAFUN.
+        g = mat2cell(f, varargin)
+
         % Global maximum of a DELTAFUN on [-1,1].
         [maxVal, maxPos] = max(f)
         
@@ -227,8 +246,8 @@ classdef (InferiorClasses = {?bndfun, ?unbndfun}) deltafun < fun
         % Basic linear plot for DELTAFUN objects.
         varargout = plot(f, varargin)
         
-        % Data for plotting a FUN
-        data = plotData(f, g);
+        % Data for plotting a DELTAFUN
+        data = plotData(f, g, h);
 
         % Addition of two DELTAFUN objects.
         f = plus(f, g)       
@@ -273,8 +292,11 @@ classdef (InferiorClasses = {?bndfun, ?unbndfun}) deltafun < fun
         f = uplus(f)                
     end
     
-    %% STATIC METHODS IMPLEMENTED BY THIS CLASS.
-    methods ( Static = true )
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %% STATIC METHODS:
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    methods ( Access = public, Static = true )
+        
         % smooth fun constructor
         s = constructFunPart( op, pref)
         
@@ -304,4 +326,21 @@ classdef (InferiorClasses = {?bndfun, ?unbndfun}) deltafun < fun
         
     end
     
+end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% METHODS IMPLEENTED IN THIS FILE:
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+function data = parseDataInputs(data, pref)
+%PARSEDATAINPUTS   Parse inputs from the DATA structure and assign defaults.
+
+if ( ~isfield(data, 'deltaMag') || isempty(data.deltaMag) )
+    data.deltaMag = [];
+end
+
+if ( ~isfield(data, 'deltaLoc') || isempty(data.deltaLoc) )
+    data.deltaLoc = [];
+end
+
 end

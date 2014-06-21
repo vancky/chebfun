@@ -24,13 +24,13 @@ function [u, info] = solvebvp(N, rhs, pref, displayInfo)
 %   the MATLAB struct INFO, which contains useful information about the solution
 %   process. The fields of INFO are as follows:
 %       ISLINEAR: A vector with four entries containing linearity information
-%           for N. More specifically, 
+%           for N. More specifically,
 %               ISLINEAR(1) = 1 if N.OP is linear
 %               ISLINEAR(2) = 1 if N.LBC is linear
 %               ISLINEAR(3) = 1 if N.RBC is linear
 %               ISLINEAR(4) = 1 if N.BC is linear
 %           Otherwise, the corresponding element of ISLINEAR is equal to 0.
-%   
+%
 %   For linear problems, INFO further contains the field
 %       ERROR:    The residual of the differential equation.
 %
@@ -47,7 +47,7 @@ function [u, info] = solvebvp(N, rhs, pref, displayInfo)
 %   and
 %       uv = solvebvp(N, [0; 0]);
 %
-% See also: CHEBOP, CHEBOP/MLDIVIDE, CHEBOPPREF, CHEBOP/SOLVEBVPLINEAR, 
+% See also: CHEBOP, CHEBOP/MLDIVIDE, CHEBOPPREF, CHEBOP/SOLVEBVPLINEAR,
 %   CHEBOP/SOLVEBVPNONLINEAR, LINOP/MLDIVIDE.
 
 % Copyright 2014 by The University of Oxford and The Chebfun Developers.
@@ -70,13 +70,13 @@ if ( nargin < 4 )
     displayInfo = @N.displayInfo;
 end
 
+% Find out how many variables N operates on:
+nVars = numVars(N);
+
 % Support single input argument for autonomous scalar problems:
 if ( nargin(N) == 1 )
     N.op = @(x, u) N.op(u);
 end
-
-% NUMVARS indicate how many unknown function we seek.
-numVars = max(nargin(N) - 1, 1);
 
 % Store the domain we're working with.
 dom = N.domain;
@@ -86,8 +86,8 @@ if ( isempty(N.init) )
     % Initialise a zero CHEBFUN:
     zeroFun = chebfun(0, dom);
     % Convert to a chebmatrix of correct dimensions:
-    u0 = cell(numVars, 1);
-    for k = 1:numVars
+    u0 = cell(nVars, 1);
+    for k = 1:nVars
         u0{k} = zeroFun;
     end
     u0 = chebmatrix(u0);
@@ -116,12 +116,12 @@ if ( isnumeric(rhs) )
     % Check whether dimensions match:
     if ( ~(all(size(rhs) == [numRow, numCol])) &&  (max(size(rhs)) > 1) )
         if ( all(size(rhs) == [numCol, numRow]) )
-            warning('CHEBFUN:CHEBOP:solvebvp', ...
+            warning('CHEBFUN:CHEBOP:solvebvp:vertcat1', ...
                 'Please concatenate the right-hand side of the BVP vertically. Transposing.')
             rhs = rhs.';
         else
             error('CHEBFUN:CHEBOP:solvebvp:rhs', ...
-               'The right-hand side does not match the output dimensions of the operator.');
+                'The right-hand side does not match the output dimensions of the operator.');
         end
     end
     
@@ -131,7 +131,7 @@ if ( isnumeric(rhs) )
     
 elseif ( isa(rhs, 'chebfun') && size(rhs, 2) > 1 )
     rhs = chebmatrix(mat2cell(rhs).');
-    warning('CHEBFUN:CHEBOP:solvebvp:vertcat', ...
+    warning('CHEBFUN:CHEBOP:solvebvp:vertcat2', ...
         'Please use vertical concatenation for the right-side data.')
 end
 
@@ -140,7 +140,7 @@ if ( isnumeric(u0) )
     % Check whether dimensions match:
     if ( ~all(size(u0) == [numRow, numCol]) )
         if ( all(size(u0) == [numCol, numRow]) )
-            warning('CHEBFUN:CHEBOP:solvebvp', ...
+            warning('CHEBFUN:CHEBOP:solvebvp:vertcat3', ...
                 ['Please concatenate the initial guess of the solution for '...
                 'the BVP vertically. Transposing.']);
             u0 = u0.';
@@ -157,7 +157,7 @@ end
 % Solve:
 if ( all(isLinear) )
     % Call solver method for linear problems.
-    [u, info] = N.solvebvpLinear(L, rhs - residual, pref, displayInfo);
+    [u, info] = N.solvebvpLinear(L, rhs - residual, N.init, pref, displayInfo);
     
 else
     % TODO: Switch between residual and error oriented Newton methods.
@@ -173,7 +173,7 @@ else
         % from a CHEBFUN to a scalar. Hence, call LINEARIZE() with four outputs.
         [L, residual, isLinear, u0] = linearize(N, u0, x);
     end
-
+    
     % Call solver method for nonlinear problems.
     [u, info] = solvebvpNonlinear(N, rhs, L, u0, residual, pref, displayInfo);
     
@@ -183,6 +183,9 @@ end
 if ( all(size(u) == [1 1]) )
     u = u{1};
 end
+
+% Simplify the result:
+u = simplify(u);
 
 % Return the linearity information as well:
 info.isLinear = isLinear;

@@ -1,5 +1,41 @@
 function [ishappy, epslevel, cutoff] = classicCheck(f, pref)
 %CLASSICCHECK   Attempt to trim trailing Fourier coefficients in a FOURTECH.
+%   [ISHAPPY, EPSLEVEL, CUTOFF] = CLASSICCHECK(F, VALUES) returns an estimated
+%   location, the CUTOFF, at which the FOURTECH F could be truncated to maintain
+%   an accuracy of EPSLEVEL relative to F.VSCALE and F.HSCALE. ISHAPPY is TRUE
+%   if CUTOFF < MIN(LENGTH(VALUES),2) or F.VSCALE = 0, and FALSE otherwise.
+%   If ISHAPPY is false, EPSLEVEL returns an estimate of the accuracy achieved.
+%
+%   [ISHAPPY, EPSLEVEL, CUTOFF] = CLASSICCHECK(F, PREF) allows additional
+%   preferences to be passed. In particular, one can adjust the target accuracy
+%   with PREF.EPS.
+%
+%   CLASSICCHECK first queries HAPPINESSREQUIREMENTS to obtain TESTLENGTH and
+%   EPSLEVEL (see documentation below). If |F.COEFFS(1:TESTLENGTH)|/VSCALE <
+%   EPSLEVEL, then the representation defined by F.COEFFS is deemed happy. The
+%   value returned in CUTOFF is essentially that from TESTLENGTH (although it
+%   can be reduced if there are further COEFFS which fall below EPSLEVEL).
+%
+%   HAPPINESSREQUIREMENTS defines what it means for a FOURTECH to be happy.
+%   [TESTLENGTH, EPSLEVEL] = HAPPINESSREQUIREMENTS(VALUES, COEFFS, VSCALE, PREF)
+%   returns two scalars TESTLENGTH and EPSLEVEL. A FOURTECH is deemed to be
+%   'happy' if the coefficients COEFFS(1:TESTLENGTH) (recall that COEFFS are
+%   stored in descending order) are all below EPSLEVEL. The default choice of
+%   the test length is:
+%       TESTLENGTH = n,             for n = 1:2
+%       TESTLENGTH = 3,             for n = 3:44
+%       TESTLENGTH = round((n-1)/8) for n > 44
+%
+%   EPSLEVEL is essentially the maximum of:
+%       * pref.eps
+%       * eps*TESTLENGTH
+%       * eps*condEst (where condEst is an estimate of the condition number
+%                      based upon a finite difference approximation to the
+%                      gradient of the function from F.VALUES.).
+%   However, the final two estimated values can be no larger than 1e-4.
+%
+%   Note that the accuracy check implemented in this function is the (roughly)
+%   same as that employed in Chebfun v4.x.
 %
 % See also STRICTCHECK, LOOSECHECK.
 
@@ -47,6 +83,13 @@ elseif ( any(isinf(f.vscale)) )
     return
 end
 
+% If one column of f is the zero function, we will get into trouble further
+% down when we take the absolute value of the coefficients relative to vscale
+% and compute the relative condition number estimate in happinessCheck.  We
+% replace zero vscales by eps to avoid division by zero.
+ind = f.vscale == 0;
+f.vscale(ind) = eps;
+
 % NaNs are not allowed.
 if ( any(isnan(f.coeffs(:))) )
     error('CHEBFUN:FUN:classicCheck:NaNeval', ...
@@ -57,7 +100,7 @@ end
 % positive and negative mode coefficients.
 absCoeffs = abs(f.coeffs);
 
-% Need to handle odd/even cases separately
+% Need to handle odd/even cases separately.
 isEven = ~mod(n,2);
 if isEven
     % In this case the negative cofficients have an additional term
@@ -72,17 +115,13 @@ n = size(f.coeffs, 1);
 % Check for convergence and chop location --------------------------------------
 
 % Absolute value of coefficients, relative to vscale: (max across columns)
-ac = max(bsxfun(@rdivide, abs(f.coeffs), f.vscale), [], 2);
-
-% Take the maximum of the vscales:
-vscale = max(f.vscale);
+ac = bsxfun(@rdivide, abs(f.coeffs), f.vscale);
 
 % Happiness requirements:
 [testLength, epslevel] = ...
-    happinessRequirements(f.values, f.coeffs, f.points(), vscale, f.hscale, epslevel);
+    happinessRequirements(f.values, f.coeffs, f.points(), f.vscale, f.hscale, epslevel);
 
-if ( max(ac(1:testLength)) < epslevel )    % We have converged! Now chop tail:
-
+if ( all(max(ac(1:testLength, :)) < epslevel) ) % We have converged! Chop tail:
     % We must be happy.
     ishappy = true;
 
@@ -102,7 +141,6 @@ if ( max(ac(1:testLength)) < epslevel )    % We have converged! Now chop tail:
     for k = 1:size(ac, 1)           % Cumulative maximum.
         ind = ac(k, :) < t;
         ac(k, ind) = t(ind);
-
         ind = ac(k, :) >= t;
         t(ind) = ac(k, ind);
     end
@@ -118,9 +156,12 @@ if ( max(ac(1:testLength)) < epslevel )    % We have converged! Now chop tail:
     [ignored, perColTchop] = max(Tbpb(3:Tloc, :));
     Tchop = min(perColTchop);
 
-    % We want to keep [c(0), c(1), ..., c(cutoff)]:
+    % Cutoff value.
     cutoff = n - Tchop - 2;
-
+    % We want to keep [c(-cutoff), ...,c(-1), c(0), c(1), ..., c(cutoff)],
+    % so the number of coefficients that will be thrown away is actually 2*cutoff-1.
+    cutoff = 2*cutoff-1;
+    
 else
 
     % We're unhappy. :(
@@ -143,18 +184,17 @@ minPrec = 1e-4; % Worst case precision!
 
 % Length of tail to test.
 testLength = min(n, max(3, round((n-1)/8)));
-% testLength = min(n, max(4, round((n-1)/8)));
 
 % Look at length of tail to loosen tolerance:
-tailErr = eps*testLength^(2/3);
+tailErr = eps*testLength;
 tailErr = min(tailErr, minPrec);
 
 % Estimate the condition number of the input function by
-%    ||f(x+eps(x)) - f(x)||_inf / ||f||_inf ~~ (eps(hscale)/vscale)*f'.
+% ||f(x+eps(x)) - f(x)||_inf / ||f||_inf ~~ (eps(hscale)/vscale)*f'.
 dy = diff(values);
 dx = diff(x)*ones(1, size(values, 2));
-gradEst = max(abs(dy./dx));            % Finite difference approx.
-condEst = eps(hscale)./vscale*gradEst; % Condition number estimate.
+gradEst = max(abs(dy./dx));             % Finite difference approx.
+condEst = eps(hscale)./vscale.*gradEst; % Condition number estimate.
 condEst = min(condEst, minPrec);      
 
 % Choose maximum between prescribed tolerance and estimated rounding errors:

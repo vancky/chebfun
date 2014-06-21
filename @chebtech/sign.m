@@ -9,7 +9,7 @@ function f = sign(f, pref)
 % See also ABS.
 
 % Copyright 2014 by The University of Oxford and The Chebfun Developers.
-% See http://www.chebfun.org for Chebfun information.
+% See http://www.chebfun.org/ for Chebfun information.
 
 if ( isreal(f) )
     % Evaluate at the two end points, and an arbitrary interior point:
@@ -20,12 +20,15 @@ if ( isreal(f) )
     % Compute the floor:
     f.coeffs = sign(meanfx);
     f.vscale = abs(f.coeffs);
+    f.epslevel = 0*f.vscale + eps;
+    
 else
     if ( nargin == 1 )
         pref = chebtech.techPref();
     end
     pref.extrapolate = 1;
-    f = compose(f, @(x) x./abs(x), [], pref);
+    f = compose(f, @(x) x./abs(x), [], [], pref);
+    
 end
 
 end

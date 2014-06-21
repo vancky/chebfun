@@ -10,22 +10,21 @@ function R = realsqrt(X)
 
 % Check for complex X:
 if ( ~isreal(X) )
-    error('CHEBFUN:realsqrt:complexRes', 'REALSQRT produced complex result.');
+    error('CHEBFUN:CHEBFUN:realsqrt:complexRes', ...
+        'REALSQRT produced complex result.');
 end
-
-% TODO: It's probably cheaper to just check the result?
-% % Check for negative X:
-% minX = min(X);
-% if ( any(minX(:) < 0) )
-%     error('CHEBFUN:realsqrt:complex', 'Realsqrt produced complex result.');
-% end
 
 % X is real positive, so call SQRT.
 R = sqrt(X);
-        
+
+if ( normest(imag(R)) < 100*max(epslevel(R).*vscale(R)) )
+    R = real(R);
+end
+
 % Check for complex R:
 if ( ~isreal(R) )
-    error('CHEBFUN:realsqrt:complexRes', 'REALSQRT produced complex result.');
+    error('CHEBFUN:CHEBFUN:realsqrt:complexRes', ...
+        'REALSQRT produced complex result.');
 end
 
 end

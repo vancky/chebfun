@@ -23,7 +23,7 @@ try
     [f2, g2] = overlap(f, g);
     pass(2) = false;
 catch ME
-    pass(2) = strcmp(ME.identifier, 'CHEBFUN:overlap:domains');
+    pass(2) = strcmp(ME.identifier, 'CHEBFUN:CHEBFUN:overlap:domains');
 end
 
 % Check behavior in the basic case.
@@ -64,12 +64,8 @@ pow1 = -0.3;
 pow2 = -0.5;
 op1 = @(x) (x - dom(2)).^pow1.*sin(100*x);
 op2 = @(x) (x - dom(2)).^pow2.*cos(300*x);
-pref.singPrefs.exponents = [0 pow1];
-pref.enableBreakpointDetection = 1;
-f = chebfun(op1, dom, pref);
-pref.singPrefs.exponents = [0 pow2];
-pref.enableBreakpointDetection = 1;
-g = chebfun(op2, dom, pref);
+f = chebfun(op1, dom, 'exps', [0 pow1], 'splitting', 'on');
+g = chebfun(op2, dom, 'exps', [0 pow2], 'splitting', 'on');
 [fout, gout] = overlap(f,g);
 vals_fout = feval(fout, x);
 vals_gout = feval(gout, x);

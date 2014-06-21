@@ -5,13 +5,13 @@ function f = abs(f, varargin)
 %   with no warning. F may be complex.
 
 %  Copyright 2014 by The University of Oxford and The Chebfun Developers.
-%  See http://www.chebfun.org for Chebfun information.
+%  See http://www.chebfun.org/ for Chebfun information.
 
 if ( isreal(f) || isreal(1i*f) )    
     % Convert values and then compute ABS(). 
     f.values = abs(f.values);
     f.coeffs = f.vals2coeffs(f.values);
-    f.isReal = true(1,size(f.coeffs,2));
+    f.isReal = true(1, size(f.coeffs, 2));
 else
     f = compose(f, @abs, [], varargin{:});
 end

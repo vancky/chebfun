@@ -4,16 +4,18 @@ function [Y, X] = minandmax2( f )
 %   its domain. Y is a vector of length 2 such that Y(1) = min(f(x,y)) and Y(2)
 %   = max(f(x,y)).
 %
-%   [Y, X] = minandmax2(F) also returns the position of the minimum and maximum.
-%   That is,
+%   [Y, X] = minandmax2(F) also returns the position of the minimum and 
+%   maximum. For example,
+%
 %       F(X(1,1),X(1,2)) = Y(1)     and      F(X(2,1),X(2,2)) = Y(2)
 %
 % See also MAX2, MIN2, NORM.
 
 % Copyright 2014 by The University of Oxford and The Chebfun Developers.
-% See http://www.maths.ox.ac.uk/chebfun/ for Chebfun information.
+% See http://www.chebfun.org/ for Chebfun information.
 
-if ( isempty( f ) ) % check for empty CHEBFUN2.
+% check for empty CHEBFUN2.
+if ( isempty( f ) )
     Y = []; 
     X = [];
     return
@@ -130,11 +132,11 @@ elseif ( length(f) <= maxsize )
             map1 = bndfun.createMap(dom(1:2));
             map2 = bndfun.createMap(dom(3:4));
             % Unconstrained initial guesses:
-            Z(:,1) = asin(map1.inv(X(:,1)));
-            Z(:,2) = asin(map2.inv(X(:,2)));
+            Z(:,1) = asin(map1.Inv(X(:,1)));
+            Z(:,2) = asin(map2.Inv(X(:,2)));
             % Maps from R to [dom(1), dom(2)] and [dom(3), dom(4)], respectively.
-            map1 = @(x) map1.for(sin(x));
-            map2 = @(x) map2.for(sin(x));
+            map1 = @(x) map1.For(sin(x));
+            map2 = @(x) map2.For(sin(x));
             % Set options:
             options = optimset('Display', 'off', 'TolFun', eps, 'TolX', eps);
             warnstate = warning;
@@ -158,7 +160,7 @@ elseif ( length(f) <= maxsize )
     
 elseif ( length(f) >= maxsize )
     
-    error('CHEBFUN2:max:length', 'Rank is too large.');
+    error('CHEBFUN:CHEBFUN2:minandmax2:length', 'Rank is too large.');
     
 end
 

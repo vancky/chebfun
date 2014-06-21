@@ -12,7 +12,7 @@ function a = any(f, dim)
 %   ANY(F) is shorthand for ANY(F, 1).
 
 % Copyright 2014 by The University of Oxford and The Chebfun Developers.
-% See http://www.chebfun.org for Chebfun information
+% See http://www.chebfun.org/ for Chebfun information
 
 % Parse inputs:
 if ( nargin < 2 )
@@ -28,7 +28,7 @@ elseif ( dim == 2 )     % ANY down the rows.
     a.coeffs = a.values;
     a.vscale = abs(a.values);
     a.epslevel = eps;
-    a.isReal = true(1,size(f.coeffs,2));
+    a.isReal = true(1, size(f.coeffs, 2));
 else
     error('FOURTECH:any:dim', 'DIM input must be 1 or 2.');
 end

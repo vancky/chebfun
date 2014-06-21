@@ -7,7 +7,7 @@ function f = prolong(f, nOut)
 %   If N < LENGTH(F) than the representation is compressed (by aliasing the
 %   coefficients), which may result in loss of accuracy.
 %
-% See also FOURTECH/ALIAS
+% See also ALIAS.
 
 % Copyright 2014 by The University of Oxford and The Chebfun Developers.
 % See http://www.chebfun.org/ for Chebfun information.
@@ -28,7 +28,7 @@ end
 if ( nIn == 1 )
     m = size(f.values, 2);
     f.values = repmat(f.values, nOut, 1);
-    f.coeffs = [zeros(nDiff, m) ; f.coeffs(1,:)];
+    f.coeffs = f.vals2coeffs(f.values);
     return
 end
 

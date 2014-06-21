@@ -22,7 +22,7 @@ pass(1) = isempty(f.*[]);
 pass(2) = isempty(f.*chebfun());
 
 % Turn on splitting, since we'll need it for the rest of the tests.
-pref.enableBreakpointDetection = 1;
+pref.splitting = 1;
 
 % Test multiplication by scalars.
 f1_op = @(x) sin(x).*abs(x - 0.1);
@@ -67,21 +67,21 @@ try
     h = f1.*'X';
     pass(21) = false;
 catch ME
-    pass(21) = strcmp(ME.identifier, 'CHEBFUN:times:unknown');
+    pass(21) = strcmp(ME.identifier, 'CHEBFUN:CHEBFUN:times:unknown');
 end
 
 try
     h = f1.*f1.';
     pass(22) = false;
 catch ME
-    pass(22) = strcmp(ME.identifier, 'CHEBFUN:times:matdim');
+    pass(22) = strcmp(ME.identifier, 'CHEBFUN:CHEBFUN:times:matdim');
 end
 
 try
     h = f1.*g2q.';
     pass(23) = false;
 catch ME
-    pass(23) = strcmp(ME.identifier, 'CHEBFUN:times:matdim');
+    pass(23) = strcmp(ME.identifier, 'CHEBFUN:CHEBFUN:times:matdim');
 end
 
 %% Test on singular function:
@@ -97,13 +97,12 @@ c = 3;
 pow = -0.5;
 op = @(x) (x - dom(2)).^pow.*sin(x);
 op_exact = @(x) c*(x - dom(2)).^pow.*sin(x);
-pref.singPrefs.exponents = [0 pow];
-f = chebfun(op, dom, pref);
+f = chebfun(op, dom, 'exps', [0 pow], 'splitting', 'on');
 g = c.*f;
-g_exact = chebfun(op_exact, dom, pref);
+g_exact = chebfun(op_exact, dom, 'exps', [0 pow], 'splitting', 'on');
 
 err = norm(feval(g, x) - feval(g_exact, x), inf);
-pass(24) = ( err < 5*get(f, 'epslevel')*norm(feval(g_exact, x), inf) );
+pass(24) = ( err < 50*get(f, 'epslevel')*norm(feval(g_exact, x), inf) );
 
 %% Case of two functions: piecewise smooth chebfun - splitting on.
 pow1 = -0.3;
@@ -111,15 +110,10 @@ pow2 = -0.5;
 op1 = @(x) (x - dom(2)).^pow1.*sin(100*x);
 op2 = @(x) (x - dom(2)).^pow2.*cos(300*x);
 op_exact = @(x) (x - dom(2)).^(pow1+pow2).*sin(100*x).*cos(300*x);
-pref.singPrefs.exponents = [0 pow1];
-pref.enableBreakpointDetection = 1;
-f = chebfun(op1, dom, pref);
-pref.singPrefs.exponents = [0 pow2];
-pref.enableBreakpointDetection = 1;
-g = chebfun(op2, dom, pref);
+f = chebfun(op1, dom, 'exps', [0 pow1], 'splitting', 'on');
+g = chebfun(op2, dom, 'exps', [0 pow2] , 'splitting', 'on');
 h = f.*g;
-pref.singPrefs.exponents = [0 pow1+pow2];
-h_exact = chebfun(op_exact, dom, pref);
+h_exact = chebfun(op_exact, dom, 'exps', [0 pow1+pow2], 'splitting', 'on');
 
 err = norm(feval(h, x) - feval(h_exact, x), inf);
 pass(25) = ( err < 1e1*max(get(f, 'epslevel'), get(g, 'epslevel'))*...

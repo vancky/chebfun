@@ -1,15 +1,15 @@
 function result = parseBC(N, BC, type)
 %PARSEBC  Parse boundary conditions for CHEBOP object.
 %   This method is not intended for end users. For information about boundary
-%   conditions in chebops, see CHEBOP.
+%   conditions in CHEBOPs, see CHEBOP.
 %
 %   This method is invoked by the set methods for LBC, RBC, and BC. The types
 %   and meanings of the allowed input are described in the documentation for
 %   CHEBOP. The result is either empty or a function handle that represents the
 %   given condition as needed internally.
 
-% Copyright 2014 by The University of Oxford and The Chebfun Developers. See
-% http://www.chebfun.org/ for Chebfun information.
+% Copyright 2014 by The University of Oxford and The Chebfun Developers. 
+% See http://www.chebfun.org/ for Chebfun information.
 
 numIn = nargin(N);
 
@@ -20,7 +20,7 @@ elseif ( isnumeric(BC) )
     % This means a Dirichlet condition set to the given value. 
     if ( numIn > 2 )
         % Allow only if we are dealing with a scalar problem.
-        error('CHEBFUN:chebop:parsebc:numeric', ...
+        error('CHEBFUN:CHEBOP:parseBC:numeric', ...
             'Can only assign scalar BCs to scalar problems');
     else
         result = @(u) u - BC;
@@ -32,12 +32,13 @@ elseif ( isa(BC, 'function_handle') )
     % input function handle that takes one argument. Otherwise, we request that
     % the number of input to the BC function handle is one less than the number
     % of arguments to the OP part.
-    if ( ( (numIn <= 1) && (nargin(BC) == 1) ) || ...
+    if ( (numIn == 0) || ( (numIn == 1) && (nargin(BC) == 1) ) || ...
             ( strcmp(type,'lrbc') && (nargin(BC) == (numIn - 1)) ) || ...
-            ( strcmp(type,'bc') && (nargin(BC) == numIn) ) )
+            ( strcmp(type,'bc') && (nargin(BC) == numIn) ) || ...
+            ( strcmp(type,'bc') && (nargin(BC) == numIn + 1) ) )
         result = BC;
     else
-        error('CHEBFUN:chebop:parsebc:inputs', ...
+        error('CHEBFUN:CHEBOP:parseBC:inputs', ...
             'Number of inputs to BCs do not match operator.');
     end
     
@@ -46,7 +47,7 @@ elseif ( strcmpi(BC, 'neumann') )
     if ( numIn <= 2 )
         result = @(u) diff(u);
     else
-        error('CHEBFUN:chebop:parsebc:neuman', ...
+        error('CHEBFUN:CHEBOP:parseBC:neuman', ...
             'Can only assign scalar BCs to scalar problems.');
     end
     
@@ -55,7 +56,7 @@ elseif ( strcmpi(BC, 'dirichlet') )
     if ( numIn <= 2 )
         result = @(u) u;
     else
-        error('CHEBFUN:chebop:parsebc:dirichlet', ...
+        error('CHEBFUN:CHEBOP:parseBC:dirichlet', ...
             'Can only assign scalar BCs to scalar problems.');
     end
     
@@ -64,9 +65,9 @@ elseif ( iscell(BC) ) && ( length(BC) == 2 ) && ( ischar(BC{2}) ) && ...
     % A cell may have a numerical value followed by a keyword of 'dirichlet' or
     % 'neumann'.
     
-    % This behavior is retained only for backward compatability and only for
+    % This behavior is retained only for backward compatibility and only for
     % problems with one variable. 
-    warning('CHEBFUN:chebop:parsebc:keywordbc',...
+    warning('CHEBFUN:CHEBOP:parseBC:keywordbc',...
         ['Keyword/value specifications of boundary conditions are ', ...
          'deprecated and may be removed in future versions of Chebfun.'])
             
@@ -75,12 +76,12 @@ elseif ( iscell(BC) ) && ( length(BC) == 2 ) && ( ischar(BC{2}) ) && ...
     elseif ( strcmpi(BC{2}, 'dirichlet') && ( numIn <= 2 ) )
         result = @(u) u - BC{1};
     else
-         error('CHEBFUN:chebop:parsebc:cell', ...
+         error('CHEBFUN:CHEBOP:parseBC:cell', ...
             'Unable to parse cell input to set BC.');
     end
     
 else
-    error('CHEBFUN:chebop:parsebc:unknown', 'Unsupported format of BCs.')
+    error('CHEBFUN:CHEBOP:parseBC:unknown', 'Unsupported format of BCs.')
 
 end
 

@@ -19,25 +19,26 @@ end
 
 % d must be a 2X1 or 1X2 vector:
 if ( ~isvector(d) || length(d) > 2)
-    error('CHEBFUN:MEASURE', ...
+    error('CHEBFUN:CHEBFUN:measure:badInput', ...
         'Invalid second input argument.');
 end
 
 % Function f must be real valued:
 if ( ~isreal(f) )
-    error('CHEBFUN:MEASURE', ...
+    error('CHEBFUN:CHEBFUN:measure:complex', ...
         'Complex valued functions can not be measured in Chebfun.');
 end
 
 % If f is not continuous, results may be wrong.
 if ( ~iscont(f) )
-    warning('CHEBFUN:MEASURE', ...
+    warning('CHEBFUN:CHEBFUN:measure:discontinuous', ...
         'The function is not continuous, results may be inaccurate.');
 end
 
 % a should not be greater than b:
 if ( (a > b) || (a == inf) || (b == -inf) )
-    error('CHEBFUN:MEASURE', 'a should not be greater than b.' );
+    error('CHEBFUN:CHEBFUN:measure:badInterval', ...
+        'a should not be greater than b.' );
 end
 
 % What to do if a == b
@@ -143,7 +144,7 @@ else
             measure = ends(end) - ends(1);
         else
             % This means the function did hit a or b and but not detected.
-            error('CHEBFUN:MEASURE', 'Root not detected');
+            error('CHEBFUN:CHEBFUN:measure:noRoot', 'Root not detected');
         end
     end
 end
@@ -205,7 +206,8 @@ end
 % Sanity check:
 if ( length(r) ~= lenA + lenB )
     % Something has gone wrong.
-    error('CHEBFUN:HIST:SORTANDMERGE', 'Roots likely to have duplication.');
+    error('CHEBFUN:CHEBFUN:measure:sortAndMerge:duplicateRoots', ...
+        'Roots likely to have duplication.');
 end
 
 end
@@ -233,11 +235,14 @@ isc = true;
 % Delta functions.
 pref = chebfunpref();
 deltaTol = pref.deltaPrefs.deltaTol;
-deltas = getDeltaFunctions(f);
-if ( any(any(abs(deltas(:)) > deltaTol)) )
-    % Function with non-trivial delta functions is never continuous.
-    isc = false;
-    return
+out = get(f, 'deltas');
+if ( ~isempty(out) )
+    deltas = out(2:end, :);
+    if ( any(any(abs(deltas(:)) > deltaTol)) )
+        % Function with non-trivial delta functions is never continuous.
+        isc = false;
+        return
+    end
 end
 
 % Exponents.

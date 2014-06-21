@@ -19,7 +19,7 @@ function f = compose(f, op, g, pref)
 %   call to COMPOSE().
 
 % Copyright 2014 by The University of Oxford and The Chebfun Developers.
-% See http://www.chebfun.org for Chebfun information.
+% See http://www.chebfun.org/ for Chebfun information.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Here is a small flowchart of how this process works. (In Chebfun V4 there was
@@ -41,6 +41,15 @@ function f = compose(f, op, g, pref)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % [TODO]: vscale and tolerance?
+
+% [TODO]: 
+%  The lower level constructors and compose() methods all accept a 'data'
+%  structure input. In the long term it might be useful to allow the chebfun
+%  compose() methods also to accept this (note that chebfun.constructor())
+%  already does). However, this is a nontrivial amount of work, and currently
+%  there's nothing that would make use of this feature 9for example, a
+%  composition whereby you know the form of the exponents in the solution). If
+%  that changes, we should revisit this issue.
 
 % Parse inputs:
 opIsBinary = false;
@@ -74,10 +83,10 @@ if ( isa(op, 'chebfun') )
     g = op;
     
 %     if ( numColumns(f) ~= numColumns(g) )
-%             error('CHEBFUN:compose:dims', 'Matrix dimensions must agree.')
+%             error('CHEBFUN:CHEBFUN:compose:dims', 'Matrix dimensions must agree.')
 %     end
     if ( numColumns(f) > 1 && numColumns(g) > 1 )
-        error('CHEBFUN:composeChebfuns:trans', ...
+        error('CHEBFUN:CHEBFUN:compose:trans', ...
             'Cannot compose two array-valued CHEBFUN objects.');
     end
     
@@ -104,7 +113,8 @@ elseif ( opIsBinary )
     % Binary composition:
     
     if ( numColumns(f) ~= numColumns(g) )
-            error('CHEBFUN:compose:dims', 'Matrix dimensions must agree.')
+            error('CHEBFUN:CHEBFUN:compose:dims', ...
+                'Matrix dimensions must agree.')
     end
     
     if ( numel(f) == 1 && numel(g) == 1 )
@@ -168,9 +178,9 @@ newFuns = {};
 % Initialise new domain vector:
 newDom = f.domain(1);
 
-if ( pref.enableBreakpointDetection) % Is splitting on?
+if ( pref.splitting) % Is splitting on?
     % Set the maximum length (i.e., number of sample points for CHEBTECH):
-    pref.techPrefs.maxLength = pref.breakpointPrefs.splitMaxLength;
+    pref.techPrefs.maxLength = pref.splitPrefs.splitLength;
 end
 
 % Suppress growing vector Mlint warnings (which are inevitable here):
@@ -181,13 +191,13 @@ for k = 1:numInts
     
     % Attempt to generate FUN objects using FUN/COMPOSE().
     if ( isempty(g) )
-        newFun = compose(f.funs{k}, op, [], pref);
+        newFun = compose(f.funs{k}, op, [], [], pref);
     else
-        newFun = compose(f.funs{k}, op, g.funs{k}, pref);
+        newFun = compose(f.funs{k}, op, g.funs{k}, [], pref);
     end
     isHappy = get(newFun, 'ishappy');
 
-    if ( isHappy || ~pref.enableBreakpointDetection )
+    if ( isHappy || ~pref.splitting )
         % If we're happy or not allowed to split, this will do.
 
         if ( ~isHappy )
@@ -197,7 +207,7 @@ for k = 1:numInts
             catch ME %#ok<NASGU>
                 str = '';
             end
-            warning('CHEBFUN:compose:resolve', ['Composition ', str, ...
+            warning('CHEBFUN:CHEBFUN:compose:resolve', ['Composition ', str, ...
                 ' not resolved using ', int2str(length(newFun)), ...
                 ' points. Have you tried ''splitting on''?']);
         end
@@ -213,7 +223,7 @@ for k = 1:numInts
             newPointValues = [newPointValues ; pointValues(k+1,:)];
         end
 
-    elseif ( pref.enableBreakpointDetection )
+    elseif ( pref.splitting )
 
         % If not happy and splitting is on, get a CHEBFUN for that subinterval:
         domk = f.domain(k:k+1);
@@ -230,7 +240,7 @@ for k = 1:numInts
             catch ME %#ok<NASGU>
                 str = '';
             end
-            warning('CHEBFUN:compose:resolve', ['Composition ', str, ...
+            warning('CHEBFUN:CHEBFUN:compose:resolve', ['Composition ', str, ...
                 ' not resolved using ', int2str(length(newChebfun)), ...
                 ', points.']);
         end
@@ -276,7 +286,7 @@ end
 %% ERROR CHECKING:
 
 if ( xor(f.isTransposed, g.isTransposed) )
-    error('CHEBFUN:composeChebfuns:trans', ...
+    error('CHEBFUN:CHEBFUN:compose:composeTwoChebfuns:trans', ...
         'Cannot compose a row CHEBFUN with a column CHEBFUN.');
 end
 
@@ -289,29 +299,28 @@ end
 
 % f must be a real-valued function:
 if ( ~isreal(f) )
-%     error('CHEBFUN:compose:complex', 'F must be real valued to construct G(F).')
-    warning('CHEBFUN:compose:complex', ...
+%     error('CHEBFUN:CHEBFUN:compose:complex', 'F must be real valued to construct G(F).')
+    warning('CHEBFUN:CHEBFUN:compose:composeTwoChebfuns:complex', ...
         ['F should be real valued to construct G(F).\n', ...
          'Results may be inaccurate if G is not a polynomial.']);
 end
 
-% [TODO]: Requires MINANDMAX().
-% % Get epslevels and set a tolerance:
-% tol = 10*max(vscale(f).*epslevel(f), vscale(g).*epslevel(g));
-% hsf = hscale(f); 
-% % Find the range of F:
-% mmF = minandmax(f);
-% minF = min(mmF(:));
-% maxF = max(mmF(:));
-% % Range of f must be in the domain of g:
-% if ( g.domain(1) > minF + tol*hsf || g.domain(end) < maxF - tol*hsf )
-%     error('CHEBFUN:compose:domain', ...
-%         'Range of F, [%g, %g], must be in the domain of G, [%g, %g].', ...
-%         minF, maxF, g.domain(1), g.domain(end))
-% end
+% Get epslevels and set a tolerance:
+tol = 10*max(vscale(f).*epslevel(f), vscale(g).*epslevel(g));
+hsf = hscale(f); 
+% Find the range of F:
+mmF = minandmax(f);
+minF = min(mmF(:));
+maxF = max(mmF(:));
+% Range of f must be in the domain of g:
+if ( g.domain(1) > minF + tol*hsf || g.domain(end) < maxF - tol*hsf )
+    error('CHEBFUN:CHEBFUN:compose:domain', ...
+        'Range of F, [%g, %g], must be in the domain of G, [%g, %g].', ...
+        minF, maxF, g.domain(1), g.domain(end))
+end
 
 if ( isdelta(f) || isdelta(g) )
-    warning('CHEBFUN:COMPOSE:DELTACOMPOSE', ...
+    warning('CHEBFUN:CHEBFUN:compose:composeTwoChebfuns:deltas', ...
         'Composition ignores delta functions. Results may not make any sense.');
 end
 

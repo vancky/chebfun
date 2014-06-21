@@ -21,7 +21,7 @@ pass(1) = isempty(f + []);
 pass(2) = isempty(f + g);
 
 % Turn on splitting, since we'll need it for the rest of the tests.
-pref.enableBreakpointDetection = 1;
+pref.splitting = 1;
 
 %% Test addition with scalars.
 f1_op = @(x) sin(x).*abs(x - 0.1);
@@ -110,10 +110,8 @@ x = diff(dom) * rand(100, 1) + dom(1);
 pow = -1;
 op1 = @(x) (x - dom(2)).^pow.*sin(100*x);
 op2 = @(x) (x - dom(2)).^pow.*cos(300*x);
-pref.singPrefs.exponents = [0 pow];
-pref.enableBreakpointDetection = 1;
-f = chebfun(op1, dom, pref);
-g = chebfun(op2, dom, pref);
+f = chebfun(op1, dom, 'exps', [0 pow], 'splitting', 'on');
+g = chebfun(op2, dom, 'exps', [0 pow], 'splitting', 'on');
 h = f + g;
 vals_h = feval(h, x);
 op = @(x)  (x - dom(2)).^pow.*(sin(100*x)+cos(300*x));

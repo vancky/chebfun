@@ -16,7 +16,7 @@ function f = cumsum(f, m, dim)
 % See also DIFF, SUM.
 
 % Copyright 2014 by The University of Oxford and The Chebfun Developers.
-% See http://www.chebfun.org for Chebfun information.
+% See http://www.chebfun.org/ for Chebfun information.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % If the FOURTECH G of length n is represented as
@@ -26,7 +26,7 @@ function f = cumsum(f, m, dim)
 % where b_0 is determined from the constant of integration as
 %       b_0 = \sum_{k=-(n-1)/2}^{(n-1)/2} (-1)^k/(i*pi*k) c_k;
 % with c_0 := 0. The other coefficients are given by
-%       b_k = c_k/(i*pi*k), 
+%       b_k = c_k/(i*pi*k). 
 %
 % If the FOURTECH G of length n is represented as
 %       \sum_{k=-n/2+1}^{n/2-1} c_k exp(i*pi*kx) + c(n/2)cos(n*pi/2x)
@@ -38,7 +38,7 @@ function f = cumsum(f, m, dim)
 % where b_0 is determined from the constant of integration as
 %       b_0 = \sum_{k=-n/2}^{n/2} (-1)^k/(i*pi*k) a_k;
 % with a_0 := 0. The other coefficients are given by
-%       b_k = a_k/(ik), 
+%       b_k = a_k/(ik).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Trivial case of an empty FOURTECH:
@@ -71,16 +71,17 @@ end
 
 function f = cumsumContinuousDim(f, m)
 % CUMSUM over the continuous dimension.
+
     % Initialize storage:
-    c = f.coeffs;                         % Obtain Fourier coefficients {c_k}
+    c = f.coeffs; % Obtain Fourier coefficients {c_k}
     numCoeffs = size(c,1);
     
     fIsEven = mod(numCoeffs,2) == 0;
 
     % Check that the mean of the fourtech is zero.  If it is not, then
     % throw an error.
-    if abs(c((numCoeffs+1-fIsEven)/2,:)) > f.vscale.*f.epslevel
-        error('CHEBFUN:FOURTECH:cumsum:mean', 'Indefinite integrals are only possible for FOURTECH objects with zero mean.');
+    if any(abs(c((numCoeffs+1-fIsEven)/2,:)) > f.vscale.*f.epslevel)
+        error('CHEBFUN:FOURTECH:cumsum:meanNotZero', 'Indefinite integrals are only possible for FOURTECH objects with zero mean.');
     end
     
     % Force the mean to be exactly zero.
@@ -94,6 +95,7 @@ function f = cumsumContinuousDim(f, m)
         c((numCoeffs+1)/2,:) = 0;
         highestDegree = (numCoeffs-1)/2;
     end
+    
     % Loop for integration factor for each coefficient:
     sumIndicies = (highestDegree:-1:-highestDegree).';
     integrationFactor = (-1i./sumIndicies/pi).^m;
@@ -125,8 +127,11 @@ function f = cumsumContinuousDim(f, m)
     
     f.coeffs = c;
 
-    % Update vscale: [TODO]: Update epslevel?
+    % Update vscale
     f.vscale = max(abs(f.values), [], 1);
+
+    % Update epslevel:
+    f.epslevel = updateEpslevel(f);
     
     % Simplify (as suggested in Chebfun ticket #128)
     f = simplify(f);
@@ -135,6 +140,7 @@ function f = cumsumContinuousDim(f, m)
     lval = get(f, 'lval');
     f.coeffs(end,:) = f.coeffs(end,:) - lval;
     f.values = bsxfun(@minus, f.values, lval);
+    
 end
 
 function f = cumsumFiniteDim(f, m)
@@ -143,11 +149,10 @@ function f = cumsumFiniteDim(f, m)
     for k = 1:m
         f.values = cumsum(f.values, 2);
         f.coeffs = cumsum(f.coeffs, 2);
-        vscale = max(abs(f.values), [], 1);
-        f.epslevel = sum(f.epslevel.*f.vscale, 2)/sum(vscale, 2); % TODO: Is this right?
-        f.vscale = vscale;
+        newVscale = max(abs(f.values), [], 1);
+        epslevelApprox = sum(f.epslevel.*f.vscale, 2)/sum(newVscale, 2); % TODO: Is this right?        
+        f.epslevel = updateEpslevel(f, epslevelApprox);
+        f.vscale = newVscale;
     end
 
 end
-
-

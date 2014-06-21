@@ -1,10 +1,10 @@
-function pass = test_basic_constructor( pref ) 
+function pass = test_constructor( pref ) 
 % This tests the chebfun2 constructor.  
 
 if ( nargin < 1 ) 
     pref = chebfunpref; 
 end 
-tol = 1e2 * pref.cheb2Prefs.eps; 
+tol = 1e2 * pref.eps; 
 
 % Can we make a chebfun2: 
 f = @(x,y) cos( x ) + sin( x .* y );  % simple function. 
@@ -31,19 +31,21 @@ f = @(x,y) 1./(1+25*x.^2.*y.^2);
 ffch = chebfun2(@(x,y) f(x,y), [-2 2 -2 2]);
 xx = linspace(-2,2); 
 [XX,YY] = meshgrid(xx,xx);
-pass(6) = ( max(max( abs(f(XX,YY) - ffch(XX,YY) ))) < 2e3*tol );
+pass(6) = ( max(max( abs(f(XX,YY) - ffch(XX,YY) ))) < 2e4*tol );
 
-% Grady's function that failed: 
-g = @(x,y) exp(-1./max(1 - ((x-0.02).^2 + (y-0.033).^2),0));
-f = chebfun2(g,[-pi,pi,-pi,pi]);
-[xx,yy] = meshgrid(linspace(-pi,pi,101));
-err = g(xx,yy)-f(xx,yy);
-pass(7) = ( norm(err(:),inf ) < 2e3*tol );
+% Test that #928 is fixed.
+f = chebfun2(@(x,y) 1, 'vectorize');
+g = chebfun2(1);
+pass(7) = norm(f - g) < tol;
+f = chebfun2(@(x,y) 1, 'vectorize');
+g = chebfun2(1);
+pass(8) = norm(f - g) < tol;
 
-% Another variant on Grady's function: 
-g = @(x,y) exp(-((x-0.2).^2+(y-0.33).^2)./max(1 - ((x-0.2).^2 + (y-0.33).^2),0));
-f = chebfun2(g,[-pi,pi,-pi,pi]);
-[xx,yy] = meshgrid(linspace(-pi,pi,101));
-err = g(xx,yy)-f(xx,yy);
-pass(8) = ( norm(err(:),inf ) < 2e3*tol );
+% Test that the 2nd argument can be a preference:
+p = pref;
+p.tech = @fourtech;
+f = chebfun2(@(x,y) sin(pi*x).*cos(pi*y), p);
+g = chebfun2(@(x,y) sin(pi*x).*cos(pi*y), [-1 1 -1 1], p);
+pass(9) = norm(f - g) < tol;
+
 end

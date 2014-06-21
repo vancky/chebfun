@@ -4,7 +4,7 @@ function pass = test_vertcat( pref )
 
 % Testing chebfun2v objects with three components. 
 if ( nargin < 1 ) 
-    pref = chebfun2pref; 
+    pref = chebfunpref; 
 end 
 tol = 1e3 * pref.eps; 
 j = 1;

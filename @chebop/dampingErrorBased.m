@@ -32,6 +32,8 @@ function [u, dampingInfo] = dampingErrorBased(N, u, rhs, delta, L, disc, damping
 %   normDeltaOld:   Norm of previous Newton correction.
 %   deltaBar:       Previous simplified Newton step.
 %   x:              The independent variable on the interval.
+%   success:        Equal to 1 if we converge within the damped phase, 0
+%                   otherwise.
 %   
 %   For further details, see
 %    [1] P. Deuflhard. Newton Methods for Nonlinear Problems. Springer, 2004.
@@ -52,10 +54,12 @@ normDelta =     dampingInfo.normDelta;
 normDeltaBar =  dampingInfo.normDeltaBar;
 normDeltaOld =  dampingInfo.normDeltaOld;
 deltaBar =      dampingInfo.deltaBar;
+x =             dampingInfo.x;
+giveUp =        dampingInfo.giveUp;
 
-% Hard code x into N.op so that we don't have to keep recomputing it:
-x = dampingInfo.x;
-N.op = @(varargin) N.op(x, varargin{:});
+% Determine how many arguments N.op expects, so that we know whether we need to
+% pass x or not:
+numberOfInputs = nargin(N);
 
 % Monitors whether we want to accept the current steplength:
 accept = 0;
@@ -64,6 +68,10 @@ accept = 0;
 % are finding the first value of lambda at a given Newton step, or whether we
 % are correcting the value initially predicted for that step).
 initPrediction = 1;
+
+% Usually, the overall Newton iteration will not converge within the damped
+% phase
+success = 0;
 
 % Iterate until we find a step-size lambda that we accept:
 while ( ~accept )
@@ -92,15 +100,20 @@ while ( ~accept )
         normDeltaOld = normDelta;
         initPrediction = 1;
         lambda = 1;
-        giveUp = 1;
+        giveUp = giveUp + 1/2;
         cFactor = NaN;
         continue
     end
     
     % Take a trial step
     uTrial = u + lambda*delta;
+    
     % Evaluate the operator:
-    NopTrial = feval(N, uTrial);
+    if ( numberOfInputs < 2 )
+        NopTrial = feval(N, uTrial);
+    else
+        NopTrial = feval(N, x, uTrial);
+    end
     
     % If N.op was stacked horizontally (i.e., V4 syntax), then we need to
     % convert NopTrial to a CHEBMATRIX:
@@ -113,7 +126,7 @@ while ( ~accept )
     
     % Compute a simplified Newton step using the current derivative of the
     % operator, but with a new right-hand side.
-    [deltaBar, disc] = linsolve(L, deResFunTrial, disc);
+    [deltaBar, disc] = linsolve(L, deResFunTrial, disc, vscale(u));
     
     % We had two output arguments above, need to negate deltaBar:
     deltaBar = -deltaBar;    
@@ -141,16 +154,17 @@ while ( ~accept )
     lambdaPrime = min(1, muPrime);
     
     if ( lambdaPrime == 1 && normDeltaBar < errTol )
-        % TODO: We have converged within the damped phase! 
-        % Do we need to treat this case separately within solvebvpNonlinear?
+        % We have converged within the damped phase! 
+        % solvebvpNonlinear will find out about our success.
         u = uTrial + deltaBar; %#ok<NASGU>
+        success = 1;
         giveUp = 0; 
         break
     end
     
     % Switch to pure Newton if we are experiencing good convergence
     if ( lambdaPrime == 1 && cFactor < .5 )
-        dampingInfo.damped = 0;
+        dampingInfo.damping = 0;
     end
     
     % TODO: Document
@@ -175,5 +189,5 @@ dampingInfo.cFactor =       cFactor;
 dampingInfo.normDeltaBar =  normDeltaBar;
 dampingInfo.deltaBar =      deltaBar;
 dampingInfo.giveUp =        giveUp;
-
+dampingInfo.success =       success;
 end

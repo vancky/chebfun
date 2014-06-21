@@ -2,9 +2,9 @@ function [ishappy, epslevel, cutoff] = classicCheck(f, values, pref)
 %CLASSICCHECK   Attempt to trim trailing Chebyshev coefficients in a CHEBTECH.
 %   [ISHAPPY, EPSLEVEL, CUTOFF] = CLASSICCHECK(F, VALUES) returns an estimated
 %   location, the CUTOFF, at which the CHEBTECH F could be truncated to maintain
-%   an accuracy of EPSLEVEL relative to F.VSCALE and F.HSCALE. ISHAPPY is
-%   TRUE if CUTOFF < MIN(LENGTH(VALUES),2) or F.VSCALE = 0, and FALSE
-%   otherwise.
+%   an accuracy of EPSLEVEL relative to F.VSCALE and F.HSCALE. ISHAPPY is TRUE
+%   if CUTOFF < MIN(LENGTH(VALUES),2) or F.VSCALE = 0, and FALSE otherwise.
+%   If ISHAPPY is false, EPSLEVEL returns an estimate of the accuracy achieved.
 %
 %   [ISHAPPY, EPSLEVEL, CUTOFF] = CLASSICCHECK(F, PREF) allows additional
 %   preferences to be passed. In particular, one can adjust the target accuracy
@@ -28,15 +28,14 @@ function [ishappy, epslevel, cutoff] = classicCheck(f, values, pref)
 %
 %   EPSLEVEL is essentially the maximum of:
 %       * pref.eps
-%       * eps*TESTLENGTH^(2/3)
+%       * eps*TESTLENGTH
 %       * eps*condEst (where condEst is an estimate of the condition number
 %                      based upon a finite difference approximation to the
 %                      gradient of the function from F.VALUES.).
 %   However, the final two estimated values can be no larger than 1e-4.
 %
-%
-%   Note that the accuracy check implemented in this function is the same as
-%   that employed in Chebfun v4.x.
+%   Note that the accuracy check implemented in this function is the (roughly)
+%   same as that employed in Chebfun v4.x.
 %
 % See also STRICTCHECK, LOOSECHECK.
 
@@ -57,7 +56,6 @@ if ( nargin == 1 )
     epslevel = pref.eps;
 elseif ( isnumeric(pref) )
     epslevel = pref;
-    pref = f.techPref();
 else
     epslevel = pref.eps;
 end
@@ -94,7 +92,7 @@ f.vscale(ind) = eps;
 
 % NaNs are not allowed.
 if ( any(isnan(f.coeffs(:))) )
-    error('CHEBFUN:FUN:classicCheck:NaNeval', ...
+    error('CHEBFUN:CHEBTECH:classicCheck:nanEval', ...
         'Function returned NaN when evaluated.')
 end
 
@@ -156,6 +154,9 @@ else
 
     % We're unhappy. :(
     cutoff = n;
+    
+    % Estimate the epslevel:
+    epslevel = mean(ac(1:testLength, :));
 
 end
 
@@ -176,7 +177,7 @@ minPrec = 1e-4; % Worst case precision!
 testLength = min(n, max(5, round((n-1)/8)));
 
 % Look at length of tail to loosen tolerance:
-tailErr = eps*testLength^(2/3);
+tailErr = eps*testLength;
 tailErr = min(tailErr, minPrec);
 
 % Estimate the condition number of the input function by

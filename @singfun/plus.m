@@ -17,7 +17,8 @@ end
 % Check if inputs are other than SINGFUNS, SMOOTHFUNS or doubles:
 if ( (~isa(f, 'singfun') && ~isa(f, 'smoothfun') && ~isa(f, 'double')) || ...
      (~isa(g, 'singfun') && ~isa(g, 'smoothfun') && ~isa(g, 'double')) )
-    error('SINGFUN:times:Input can only be a SINGFUN, a SMOOTHFUN or a double')
+    error('CHEBFUN:SINGFUN:plus:badInput' , ...
+        'Input can only be a SINGFUN, a SMOOTHFUN or a double')
 end
 % One of the arguments i.e. f or g is necessarily a SINGFUN object. Otherwise, 
 % this overloaded plus would not have been called.
@@ -58,7 +59,7 @@ end
 
 fExps = f.exponents;
 gExps = g.exponents;
-tolExps = chebfunpref().singPrefs.exponentTol;
+tolExps = chebfunpref().blowupPrefs.exponentTol;
 tolSmth = 1e2*eps;
 
 %%
@@ -112,7 +113,7 @@ elseif ( all(abs(round(fExps - gExps) - (fExps - gExps)) < tolExps) )
     
     % Construct the new smooth fun:
     s = singfun.zeroSingFun();
-    s.smoothPart = singfun.constructSmoothPart(smoothOp, [], [], []);
+    s.smoothPart = singfun.constructSmoothPart(smoothOp, [], []);
     
     % Assign new exponents:
     s.exponents = newExps;
@@ -121,7 +122,7 @@ else
     % Case 3: Nontrivial difference in the exponents of F and G. Form a new
     % function handle for the sum from F and G.
     
-    warning('CHEBFUN:SINGFUN:plus', ...
+    warning('CHEBFUN:SINGFUN:plus:exponentDiff', ...
         ['Non-integer difference in the exponents of the two SINGFUN ' ...
         'objects: The result may not be accurate.']);
     
@@ -137,7 +138,10 @@ else
     exps = min(exps);
     
     % Construct a new SINGFUN for the sum:
-    s = singfun(op, exps, [], vScale, hScale);
+    data.exponents = exps;
+    data.vscale = vScale;
+    data.hscale = hScale;
+    s = singfun(op, data, []);
 end
 
 %%

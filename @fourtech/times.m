@@ -17,10 +17,12 @@ if ( isempty(f) || isempty(g) )
     return
 end
 
-if ( ~isa(f, 'fourtech') )      % Ensure F is a FOURTECH
+if ( ~isa(f, 'fourtech') )      % Ensure F is a FOURTECH.
+    
     f = times(g, f, varargin{:});
     return
-elseif ( isa(g, 'double') )     % FOURTECH .* double
+    
+elseif ( isa(g, 'double') )     % FOURTECH .* double.
     
     % Do the multiplication:
     if ( size(g, 2) > 1 )
@@ -35,6 +37,13 @@ elseif ( isa(g, 'double') )     % FOURTECH .* double
     f.epslevel = f.epslevel + eps(g);
     f.isReal = f.isReal & isreal(g);
     return
+
+elseif ( ~isa(f, 'fourtech') || ~isa(g, 'fourtech') )
+    % Don't know how to do the operation.
+    
+    error('CHEBFUN:FOURTECH:times:typeMismatch', ...
+        ['Incompatible operation between objects.\n', ...
+         'Make sure functions are of the same type.']);
     
 elseif ( size(f.values, 1) == 1 )
     % If we have (constant FOURTECH).*FOURTECH, reverse the order and call TIMES
@@ -69,7 +78,7 @@ if ( fm ~= gm )
         g.values = repmat(g.values, 1, fm);
         g.coeffs = repmat(g.coeffs, 1, fm);
     else
-        error('FOURTECH:times:dim2', ...
+        error('CHEBFUN:FOURTECH:times:dim2', ...
             'Inner matrix dimensions must agree.');
     end
 end
@@ -106,11 +115,12 @@ f.vscale(f.vscale == 0) = 1;
 g.vscale(g.vscale == 0) = 1;
  
 % See CHEBTECH CLASSDEF file for documentation on this:
-f.epslevel = (f.epslevel + g.epslevel) .* (f.vscale.*g.vscale./tmpVscale);
+epslevelBound = (f.epslevel + g.epslevel) .* (f.vscale.*g.vscale./tmpVscale);
+f.epslevel = updateEpslevel(f, epslevelBound);
 f.vscale  = vscale;
 f.ishappy = f.ishappy && g.ishappy;
 
-% Simplify
+% Simplify.
 f = simplify(f);
 
 if ( pos )
@@ -118,7 +128,7 @@ if ( pos )
     % SIMPLIFY may have destroyed this property, so we enforce it.
     f.values = abs(f.values); 
     f.coeffs = f.vals2coeffs(f.values);
-    f.isReal = true(1,size(f.coeffs,2));
+    f.isReal = true(1, size(f.coeffs, 2));
 else
     f.isReal = f.isReal & g.isReal;
 end

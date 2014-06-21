@@ -6,12 +6,12 @@ function [values, giveUp] = refine(op, values, pref)
 %
 %   [VALUES, GIVEUP] = REFINE(OP, VALUES, PREF) returns also a binary GIVEUP
 %   flag where TRUE means the refinement procedure has failed (typically when
-%   the maximum number of points, PREF.MAXPOINTS, has been reached).
+%   the maximum number of points, PREF.MAXLENGTH, has been reached).
 %
 %   The two built-in refinement strategies are 'NESTED' and 'RESAMPLING'. The
 %   former makes use of the nested property of the 1st-kind grid by taking N
-%   (the number of points) to be 3^(2:10) and doesn't resample previously
-%   evaluated values. The latter uses grids of the form 2^(3:6 6:.5:16) + 1 and
+%   (the number of points) to be 17*3^(0:7) and doesn't resample previously
+%   evaluated values. The latter uses grids of the form 2^(4:6 6:.5:16) + 1 and
 %   resamples all of the values each time N is increased. The 'RESAMPLING'
 %   option should be used for functions which are not sampleable, for example,
 %   anything that depends on the length of the input to OP.
@@ -51,6 +51,9 @@ else
     % User defined refinement function:
     [values, giveUp] = refFunc(op, values, pref);
 end
+
+% Ensure that doubles are returned:
+values = double(values);
     
 end
 
@@ -58,8 +61,8 @@ function [values, giveUp] = refineResampling(op, values, pref)
 %REFINERESAMPLING   Default refinement function for resampling scheme.
 
     if ( isempty(values) )
-        % Choose initial n based upon minPoints:
-        n = 2^ceil(log2(pref.minPoints - 1)) + 1;
+        % Choose initial n based upon minSamples:
+        n = 2^ceil(log2(pref.minSamples - 1)) + 1;
     else
         % (Approximately) powers of sqrt(2):
         pow = log2(size(values, 1) - 1);
@@ -72,10 +75,10 @@ function [values, giveUp] = refineResampling(op, values, pref)
     end
     
     % n is too large:
-    if ( n > pref.maxPoints )
+    if ( n > pref.maxLength )
         % Don't give up if we haven't sampled at least once.
         if ( isempty(values) )
-            n = pref.maxPoints;
+            n = pref.maxLength;
             giveUp = false;
         else
             giveUp = true;
@@ -102,33 +105,51 @@ function [values, giveUp] = refineNested(op, values, pref)
 
     else
     
-        % Compute new n by tripling (we must do this when not resampling).
-        n = 3*size(values, 1);
+        % Grab the number of the points used in last iteration:
+        n = size(values, 1);
         
-        % n is too large:
-        if ( n > pref.maxPoints )
+        if ( ( n < pref.maxLength ) && ( 3*n > pref.maxLength ) )
+            
+            % Set N as maxLength to make best of the largest number of points 
+            % allowed:
+            n = pref.maxLength;
+            
+            % 1st-kind Chebyshev grid:
+            x = chebtech1.chebpts(n);
+            
+            % Evaluate OP at X:
+            values = feval(op, x);
+            giveUp = false;
+
+        elseif ( n < pref.maxLength )
+            
+            % triple the points:
+            n = 3*n;
+            
+            % 1st-kind Chebyshev grid:
+            x = chebtech1.chebpts(n);
+            
+            % Re-group the points:
+            x1 = x(1:3:end-2);
+            x3 = x(3:3:end);
+            
+            % Copy of the sampled function values:
+            oldValues = values;
+            
+            % Compute and insert new ones:
+            values(1:3:n,:) = feval(op, x1);
+            values(3:3:n,:) = feval(op, x3);
+            
+            % Re-distribute the stored values:
+            values(2:3:n,:) = oldValues;
+        
+            giveUp = false;
+        else
+            
+            % For any other cases, give up:
             giveUp = true;
             return
-        else
-            giveUp = false;
         end
-        
-        % 1st-kind Chebyshev grid:
-        x = chebtech1.chebpts(n);
-        
-        % Re-group the points:
-        x1 = x(1:3:end-2);
-        x3 = x(3:3:end);
-        
-        % Copy of the sampled function values:
-        oldValues = values;
-                
-        % Compute and insert new ones:
-        values(1:3:n,:) = feval(op, x1);
-        values(3:3:n,:) = feval(op, x3);
-        
-        % Re-distribute the stored values:
-        values(2:3:n,:) = oldValues;
         
     end
 end

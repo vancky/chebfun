@@ -1,4 +1,4 @@
-function f = compose(f, op, g, pref)
+function f = compose(f, op, g, data, pref)
 %COMPOSE   Composition of CHEBTECH1 objects.
 %   COMPOSE(F, OP) returns a CHEBTECH1 representing OP(F), where F is also a
 %   CHEBTECH1 object, and OP is a function handle.
@@ -10,10 +10,11 @@ function f = compose(f, op, g, pref)
 %   also CHEBTECH objects. If the range of F is not in [-1, 1] then an error is
 %   thrown.
 %
-%   COMPOSE(F, OP, G, PREF) or COMPOSE(F, OP, [], PREF) uses the options passed
-%   by the preferences structure PREF to build the returned CHEBTECH1.  In
-%   particular, one can set PREF.REFINEMENTFUNCTION to be a function which takes
-%   advantage of F and possibly OP or G being CHEBTECH objects.
+%   COMPOSE(F, OP, G, DATA, PREF) or COMPOSE(F, OP, [], DATA, PREF) uses the
+%   constructor data in the structure DATA and the options passed by the
+%   preferences structure PREF to build the returned CHEBTECH1.  In particular,
+%   one can set PREF.REFINEMENTFUNCTION to be a function which takes advantage
+%   of F and possibly OP or G being CHEBTECH objects.
 
 % Copyright 2014 by The University of Oxford and The Chebfun Developers.
 % See http://www.chebfun.org/ for Chebfun information.
@@ -27,10 +28,14 @@ function f = compose(f, op, g, pref)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Parse inputs:
-if ( nargin < 4 )
+if ( nargin < 5 )
     pref = f.techPref();
 else
     pref = f.techPref(pref);
+end
+
+if ( nargin < 4 )
+    data = struct();
 end
 
 if ( (nargin < 3) || isempty(g) )
@@ -56,7 +61,7 @@ end
 pref.refinementFunction = refFunc;
 
 % Call superclass COMPOSE:
-f = compose@chebtech(f, op, g, pref);
+f = compose@chebtech(f, op, g, data, pref);
 
 end
 
@@ -65,8 +70,8 @@ function [values, giveUp] = composeResample1(op, values, pref, f)
 %resampling.
     
     if ( isempty(values) )
-        % Choose initial n based upon minPoints.
-        n = 2^ceil(log2(pref.minPoints - 1)) + 1;
+        % Choose initial n based upon minSamples.
+        n = 2^ceil(log2(pref.minSamples - 1)) + 1;
     else
         % (Approximately) powers of sqrt(2):
         pow = log2(size(values, 1) - 1);
@@ -79,10 +84,10 @@ function [values, giveUp] = composeResample1(op, values, pref, f)
     end
 
     % n is too large:
-    if ( n > pref.maxPoints )
+    if ( n > pref.maxLength )
         % Don't give up if we haven't sampled at least once.
         if ( isempty(values) )
-            n = pref.maxPoints;
+            n = pref.maxLength;
             giveUp = false;
         else
             giveUp = true;
@@ -104,8 +109,8 @@ function [values, giveUp] = composeResample2(op, values, pref, f, g)
 %resampling.
     
     if ( isempty(values) )
-        % Choose initial n based upon minPoints.
-        n = 2^ceil(log2(pref.minPoints - 1)) + 1;
+        % Choose initial n based upon minSamples.
+        n = 2^ceil(log2(pref.minSamples - 1)) + 1;
     else
         % (Approximately) powers of sqrt(2):
         pow = log2(size(values, 1) - 1);
@@ -118,10 +123,10 @@ function [values, giveUp] = composeResample2(op, values, pref, f, g)
     end
 
     % n is too large:
-    if ( n > pref.maxPoints )
+    if ( n > pref.maxLength )
         % Don't give up if we haven't sampled at least once.
         if ( isempty(values) )
-            n = pref.maxPoints;
+            n = pref.maxLength;
             giveUp = false;
         else
             giveUp = true;

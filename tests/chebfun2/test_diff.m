@@ -2,7 +2,7 @@ function pass = test_diff( pref )
 % Check the diff command in Chebfun2
 
 if ( nargin < 1 ) 
-    pref = chebfun2pref; 
+    pref = chebfunpref; 
 end 
 tol = 1e6 * pref.eps; 
 j = 1; 

@@ -12,7 +12,7 @@ function out = feval(f, x, y)
 % See also SUBSREF.
 
 % Copyright 2014 by The University of Oxford and The Chebfun Developers.
-% See http://www.maths.ox.ac.uk/chebfun/ for Chebfun information.
+% See http://www.chebfun.org/ for Chebfun information.
 
 % Empty check:
 if ( isempty(f) )
@@ -51,17 +51,18 @@ elseif ( isnumeric( x ) && isnumeric( y ) )  % f(x, y)
     % fast way to evaluate a chebfun2. Check for this property. 
     if ( min(size(x)) > 1 && all(size(x) == size(y)) )
         % Check to see if the input is a meshgrid:
-        if ( max(max(bsxfun(@minus, x, x(1,:)))) == 0  && ... 
-                max(max(bsxfun(@minus, y, y(:,1))) == 0 ))
+        if ( max(max(abs(bsxfun(@minus, x, x(1,:))))) == 0  && ... 
+                max(max(abs(bsxfun(@minus, y, y(:,1)))) == 0 ))
             % This allows someone to do: 
             % [xx,yy] = meshgrid(linspace(-1,1));
             % f(xx,yy)
             
             x = x(1,:);
             y = y(:,1);
+            takeDiag = 0;
             
-        elseif ( max(max(bsxfun(@minus, y, y(1,:)))) == 0 && ... 
-                max(max(bsxfun(@minus, x, x(:,1))) == 0 ) )
+        elseif ( max(max(abs(bsxfun(@minus, y, y(1,:))))) == 0 && ... 
+                max(max(abs(bsxfun(@minus, x, x(:,1)))) == 0 ) )
             % This allows someone to do: 
             % [yy,xx] = meshgrid(linspace(-1,1));
             % f(xx,yy)
@@ -69,9 +70,17 @@ elseif ( isnumeric( x ) && isnumeric( y ) )  % f(x, y)
             x = x(:,1); 
             y = y(1,:);
             takeTranspose = 1;
-            
+            takeDiag = 0;
+        else
+            % Evaluate at matrices, but they're not from meshgrid: 
+            out = zeros( size( x ) ); 
+            for jj = 1:size(out,1)
+                for kk = 1: size(out,2)
+                    out(jj, kk) = feval( f, x(jj,kk), y(jj,kk) ); 
+                end
+            end
+            return
         end
-        takeDiag = 0;
     else 
         takeDiag = 1; 
     end
@@ -91,7 +100,7 @@ elseif ( isnumeric( x ) && isnumeric( y ) )  % f(x, y)
     
 elseif ( isa(x, 'chebfun') )
     if ( min( size( x ) ) > 1 )
-        error('CHEBFUN2:FEVAL', ...
+        error('CHEBFUN:CHEBFUN2:feval:arrayValued', ...
             'Cannot evaluate a CHEBFUN2 at an array-valued CHEBFUN.');
     end
     
@@ -104,11 +113,11 @@ elseif ( isa(x, 'chebfun') )
             if( domainCheck(x, y) )
                 out = chebfun( @(t) feval(f, x(t), y(t)), x.domain, 'vectorize');
             else
-                error('CHEBFUN2:feval:path', ...
+                error('CHEBFUN:CHEBFUN2:feval:path', ...
                     'CHEBFUN path has domain inconsistency.');
             end
         else
-            error('CHEBFUN2:feval:complex', ...
+            error('CHEBFUN:CHEBFUN2:feval:complex', ...
                 'Cannot evaluate along complex-valued CHEBFUN.');
         end
     end
@@ -116,10 +125,11 @@ elseif ( isa(x, 'chebfun2v') )
     components = x.components; 
     % [TODO]: Check domain and range are compatible? 
     domain = components{1}.domain;
-    out = chebfun2( @(s,t) feval(f, feval(components{1},s,t),...
+    out = chebfun2(@(s,t) feval(f, feval(components{1},s,t),...
                                         feval(components{2},s,t)), domain);
 else
-    error('CHEBFUN2:FEVAL:INPUTS', 'Unrecognized arguments for evaluation.');
+    error('CHEBFUN:CHEBFUN2:feval:inputs', ...
+        'Unrecognized arguments for evaluation.');
     
 end
 

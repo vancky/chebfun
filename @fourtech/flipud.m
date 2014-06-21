@@ -3,10 +3,10 @@ function f = flipud(f)
 %   G = FLIPUD(F) returns G such that G(x) = F(-x) for all x in [-PI,PI].
 
 % Copyright 2014 by The University of Oxford and The Chebfun Developers. 
-% See http://www.chebfun.org for Chebfun information.
+% See http://www.chebfun.org/ for Chebfun information.
 
 % Flip the values:
-f.values = [f.values(1,:);flipud(f.values(2:end,:))];
+f.values = [ f.values(1,:); flipud(f.values(2:end,:)) ];
 
 % Negate the odd coefficients:
 f.coeffs = flipud(f.coeffs);

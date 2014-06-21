@@ -22,10 +22,10 @@ function [u, disc] = linsolve(L, f, varargin)
 %     u = A \ chebfun('x',d);
 %     plot(u{1})
 %
-%   See also CHEBOPPREF, CHEBOP.MLDIVIDE.
+% See also CHEBOPPREF, CHEBOP.MLDIVIDE.
 
 %  Copyright 2014 by The University of Oxford and The Chebfun Developers.
-%  See http://www.chebfun.org for Chebfun information.
+%  See http://www.chebfun.org/ for Chebfun information.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Developer note: The second output is a discretization that contains the
@@ -37,7 +37,7 @@ function [u, disc] = linsolve(L, f, varargin)
 % Parse input
 prefs = [];    % no prefs given
 disc = [];     % no discretization given
-vscale = Inf;
+vscale = zeros(size(L,2),1);
 for j = 1:nargin-2
     item = varargin{j};
     if ( isa(item, 'cheboppref') )
@@ -47,7 +47,8 @@ for j = 1:nargin-2
     elseif ( isnumeric(item) )
         vscale = item;
     else
-        error('Could not parse argument number %i.',j+2)
+        error('CHEBFUN:LINOP:linsolve:badInput', ...
+            'Could not parse argument number %i.',j+2)
     end
 end
 
@@ -65,10 +66,12 @@ elseif ( isnumeric(f) )
 end
 
 % Use a given discretization, or create one?
-dimVals = prefs.dimensionValues;
 if ( isempty(disc) )
+    % Construct the current globally set discretization:
     disc = prefs.discretization(L);
-    % Update the domain if new breakpoints are needed
+    % What values for the discretization do we want to consider?
+    dimVals = disc.dimensionValues(prefs);
+    % Update the domain if new breakpoints are needed:
     disc.domain = chebfun.mergeDomains(disc.domain, f.domain);
     % Update the dimensions to work with the correct number of breakpoints
     disc.dimension = repmat(dimVals(1), 1, numel(disc.domain) - 1);
@@ -76,14 +79,15 @@ if ( isempty(disc) )
 else
     % We have to assume that the given L matches the discretization. Caller
     % beware!
+    dimVals = disc.dimensionValues(prefs);
     dim1 = max(disc.dimension);
     dimVals = [ dim1, dimVals(dimVals > dim1) ];
 end
 
 % Derive automatic continuity conditions if none were given.
 if ( isempty(L.continuity) )
-     L = deriveContinuity(L, disc.domain);
-     disc.source = L;
+    L = deriveContinuity(L, disc.domain);
+    disc.source = L;
 end
 
 % Initialise happiness:
@@ -97,7 +101,7 @@ isFun = isFunVariable(L);
 for dim = [dimVals inf]
     
     % TODO: It's weird that the current value of dim is the _next_ disc size.
-
+    
     % Discretize the operator (incl. constraints/continuity), unless there is a
     % currently valid factorization at hand.
     if ( isFactored(disc) )
@@ -106,7 +110,8 @@ for dim = [dimVals inf]
         [A, P] = matrix(disc);
         if ( size(A, 1) ~= size(A, 2) )
             % TODO: Improve this warning.
-            warning('Matrix is not square!');
+            warning('CHEBFUN:LINOP:linsolve:notSquare', ...
+                'Matrix is not square!');
         end
     end
     
@@ -123,24 +128,30 @@ for dim = [dimVals inf]
     % each would be different and we would nopt be able to use the trick of
     % taking a linear combination. Instead we project and test convergence
     % at the size of the output dimension.
-
+    
     % Convert the different components into cells
     u = partition(disc, v);
-
+    
+    % Need a vector of vscales.
+    if ( numel(vscale)==1 ) 
+        vscale = repmat(vscale,sum(isFun),1);
+    end
+    
     % Test the happiness of the function pieces:
-    [isDone, epsLevel] = testConvergence(disc, u(isFun), vscale, prefs);
-
+    [isDone, epsLevel, vscale, cutoff] = ...
+        testConvergence(disc, u(isFun), vscale(isFun), prefs);
+    
     if ( all(isDone) || isinf(dim) )
         break
     else
         % Update the discretiztion dimension on unhappy pieces:
         disc.dimension(~isDone) = dim;
     end
-
+    
 end
 
 if ( ~all(isDone) )
-    warning('LINOP:linsolve:NoConverge', ...
+    warning('CHEBFUN:LINOP:linsolve:noConverge', ...
         'Linear system solution may not have converged.')
 end
 
@@ -148,12 +159,15 @@ end
 % The variable u is a cell array with the different components of the solution.
 % Because each function component may be piecewise defined, we will loop through
 % one by one.
-for k = find( isFun )
-    u{k} = disc.toFunctionOut(u{k});
-    u{k} = simplify( u{k}, max(eps,epsLevel) );
+values = cat(2,u{isFun});
+for k = 1:size(values,2)
+    v = disc.toFunctionOut(values(:,k));
+    uOut{k} = v;
 end
+
+u(isFun) = uOut;
 
 % Convert to chebmatrix
 u = chebmatrix(u);
-
+    
 end

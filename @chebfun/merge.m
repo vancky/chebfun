@@ -3,10 +3,9 @@ function [f, mergedPts] = merge(f, index, pref)
 %   F = MERGE(F, PREF) removes unnecessary breakpoints from a CHEBFUN F. In
 %   particular the kth breakpoint is removed if the resulting FUN on the
 %   interval [x_{k-1}, x_{k+1}] can be represented with a fewer than
-%   PREF.MAXLENGTH points when PREF.ENABLEBREAKPOINTDETECTION = 0 and
-%   PREF.BREAKPOINTPREFS.SPLITMAXLENGTH points when
-%   PREF.ENABLEBREAKPOINTDETECTION = 1. If a PREF is not passed, then the
-%   default CHEBFUN.PREF() is used.
+%   PREF.MAXLENGTH points when PREF.SPLITTING = 0 and
+%   PREF.SPLITPREFS.SPLITLENGTH points when PREF.SPLITTING = 1. If a PREF is
+%   not passed, then the default CHEBFUN.PREF() is used.
 %
 %   [F, MERGEDPTS] = MERGE(F) returns the index of the merged endpoints in the
 %   vector MERGEDPTS.
@@ -26,11 +25,12 @@ function [f, mergedPts] = merge(f, index, pref)
 % See also CHEBFUNPREF.
 
 % Copyright 2014 by The University of Oxford and The Chebfun Developers.
-% See http://www.chebfun.org for Chebfun information.
+% See http://www.chebfun.org/ for Chebfun information.
 
 if ( numel(f) > 1 )
     % TODO:  Implement this.
-    error('CHEBFUN:merge:quasi', 'MERGE does not support quasimatrices.');
+    error('CHEBFUN:CHEBFUN:merge:quasi', ...
+        'MERGE does not support quasimatrices.');
 end
 
 % Convert to a column CHEBFUN so that feval(f, x) returns a column instead of a
@@ -94,15 +94,15 @@ else
 end
 
 % Determine the maximum length of the merged pieces:
-if ( ~pref.enableBreakpointDetection )
+if ( ~pref.splitting )
     maxn = pref.techPrefs.maxLength;
 else
-    maxn = pref.breakpointPrefs.splitMaxLength;
+    maxn = pref.splitPrefs.splitLength;
 end
 pref.techPrefs.maxLength = maxn;
 
 % Splitting forces extrapolate:
-if ( pref.enableBreakpointDetection )
+if ( pref.splitting )
     pref.techPrefs.extrapolate = true;
 end
 
@@ -110,13 +110,14 @@ end
 vs = vscale(f);
 hs = hscale(f);
 tol = epslevel(f);
+pref.eps = tol;
 mergedPts = [];
 
 % Store data from input CHEBFUN:
-oldPointValues = f.pointValues;
+oldPointVals = f.pointValues;
 oldDom = f.domain;
 oldFuns = f.funs;
-newPointValues = oldPointValues;
+newPointVals = oldPointVals;
 newDom = oldDom;
 newFuns = oldFuns;
 
@@ -135,44 +136,17 @@ for k = index
     end
 
     % Prevent merging if there are jumps:
-    v = [ oldPointValues(k,:) ; get(oldFuns{k-1}, 'rval') ; get(oldFuns{k}, 'lval') ];
-    if ( norm(v([1,1],:) - v(2:3,:), inf) >= 1e3*tol )
+    v = [oldPointVals(k,:); get(oldFuns{k-1}, 'rval'); get(oldFuns{k}, 'lval')];
+    if ( all( norm(v([1, 1],:) - v(2:3,:), inf) >= 1e3*tol ) || any(isinf(v(:))) )
         % Skip to next breakpoint:
         continue
     end
 
-    % Create copy of f with values at endpoints of interval on which we are
-    % trying to create a merged fun replaced by left- and right-hand limits.
-    % If the underlying tech samples right at the endpoints, this prevents
-    % discontinuities that occur there from messing things up.
-    g = f;
-    g.pointValues(k-1,:) = get(oldFuns{k-1}, 'lval');
-    g.pointValues(k+1,:) = get(oldFuns{k}, 'rval');
-
-    % Grab the correct exponents:
+    % Call merge at the FUN level:
+    [mergedFun, ishappy] = merge(newFuns{j-1}, newFuns{j}, vs, hs, pref);
     
-    if ( issing(f) )
-        if ( ~issing(newFuns{j-1}) && ~issing(newFuns{j}) )
-            pref.singPrefs.exponents = [];
-        elseif ( issing(newFuns{j-1}) && ~issing(newFuns{j}) )
-            exps = get(newFuns{j-1}, 'exponents');
-            pref.singPrefs.exponents = [exps(1) 0];
-        elseif ( ~issing(newFuns{j-1}) && issing(newFuns{j}) )
-            exps = get(newFuns{j}, 'exponents');
-            pref.singPrefs.exponents = [0 exps(2)];
-        else
-            expsLeft = get(newFuns{j-1}, 'exponents');
-            expsRight = get(newFuns{j}, 'exponents');
-            pref.singPrefs.exponents = [expsLeft(1) expsRight(2)];
-        end
-    end
-    
-    % Attempt to form a merged FUN:
-    mergedFun = fun.constructor(@(x) feval(g, x),  ...
-        [newDom(j-1), newDom(j+1)], vs, hs, pref);
-
     % Prevent merge if the result is not happy:
-    if ( ~get(mergedFun, 'ishappy') )
+    if ( ~ishappy )
         % Skip to next breakpoint:
         continue
     end
@@ -181,14 +155,16 @@ for k = index
     mergedPts = [mergedPts, k]; %#ok<AGROW> % Store index of the removed point.
     newFuns{j-1} = mergedFun;   % Insert new fun.
     newFuns(j) = [];            % Remove unneeded fun.
-    newDom = [newDom(1:j-1), newDom(j+1:end)];        % Update domain.
-    newPointValues = [newPointValues(1:j-1,:) ; newPointValues(j+1:end,:)]; % Update pointValues.
+    newDom = [newDom(1:j-1), newDom(j+1:end)]; % Update domain.
+    % Update pointValues.
+    newPointVals = [newPointVals(1:j-1,:) ; newPointVals(j+1:end,:)]; 
 
 end
 
 % Assign data to CHEBFUN:
 f.domain = newDom;
 f.funs = newFuns;
-f.pointValues = newPointValues;
+f.pointValues = newPointVals;
 
 end
+

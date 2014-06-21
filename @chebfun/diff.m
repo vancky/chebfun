@@ -25,7 +25,7 @@ function F = diff(F, n, dim)
 %   'Caputo'). [Requires SINGFUN].
 
 % Copyright 2014 by The University of Oxford and The Chebfun Developers.
-% See http://www.chebfun.org for Chebfun information.
+% See http://www.chebfun.org/ for Chebfun information.
 
 % Trivial case:
 if ( isempty(F) )
@@ -41,13 +41,13 @@ if ( nargin < 3 )
 end
 
 if ( ~any(dim == [1, 2]) )
-    error('CHEBFUN:diff:dim', 'Dimension must either be 1 or 2.');
+    error('CHEBFUN:CHEBFUN:diff:dim', 'Dimension must either be 1 or 2.');
 end
     
 if ( round(n) ~= n )
     % Fractional integral:
     % [TODO]: Implement this!
-    error('CHEBFUN:diff:notImplemented', ...
+    error('CHEBFUN:CHEBFUN:diff:notImplemented', ...
         'Fractional derivatives not yet implemented.');
     F = fracCalc(F, n);
     return
@@ -100,6 +100,10 @@ numCols = size(f.funs{1}, 2);
 % Grb a preference:
 pref = chebfunpref();
 
+% Array for keeping track of point values in case there is a delta function at
+% a break point.
+infVals = [];
+
 if ( ~pref.enableDeltaFunctions )
     % No delta functions:
     
@@ -111,13 +115,14 @@ if ( ~pref.enableDeltaFunctions )
 else
     % Delta functions are enabled:
     
-    % Tolderance used for introducing Dirac deltas at jumps:
+    % Tolerance used for introducing Dirac deltas at jumps:
     deltaTol = pref.deltaPrefs.deltaTol;
     
     % Loop n times for nth derivative:
     for j = 1:n    
         % Detect jumps in the original function and create new deltas.
         deltaMag = getDeltaMag();
+        infVals = inf * deltaMag;
         % Differentiate each FUN in turn:
         for k = 1:numFuns
             funs{k} = diff(funs{k});
@@ -132,6 +137,8 @@ end
 
 % Compute new function values at breaks:
 pointValues = chebfun.getValuesAtBreakpoints(funs);
+I = isinf(infVals);
+pointValues(I) = infVals(I); 
 
 % Reassign data to f:
 f.funs = funs;
@@ -154,12 +161,14 @@ f.pointValues = pointValues;
         if ( any(abs(deltaMag(:)) > deltaTol) )
             % [TODO]: This does not handle array-valuedness at the moment.
             if ( size(deltaMag, 2) > 1 )
-                warning('CHEBFUN:diff:dirac:array', ...
-                    'No support here for array-valuedness at the moment.');
+                warning('CHEBFUN:CHEBFUN:diff:diffContinuousDim:makeDeltaFun:array', 'No support here for array-valuedness at the moment.');
                 deltaMag = [0 ; 0];
             end
             % New delta functions are only possible at the ends of the domain:
-            f = deltafun(f, deltaMag.'/2, f.domain, f.domain, [], [], pref);
+            data.domain = f.domain;
+            data.deltaMag = deltaMag.'/2;
+            data.deltaLoc = f.domain;
+            f = deltafun(f, data, pref);
         end
     end
 

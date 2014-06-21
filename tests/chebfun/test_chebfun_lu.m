@@ -5,7 +5,7 @@ if ( nargin == 0)
     pref = chebfunpref; 
 end
 
-tol = pref.cheb2Prefs.eps; 
+tol = pref.eps; 
 j = 1;
 
 % Check accuracy on [-1,1]
@@ -26,6 +26,6 @@ A = [1 x x.^2 x.^3 x.^4 x.^5];
 pass(j) = norm( triu(U) - U ) < tol; j = j + 1; 
 pass(j) = norm( A - L * U ) < 100*tol; j = j + 1; 
 pass(j) = norm( diag( L(p,:) ) - ones(size(L,2),1) ) < 10*tol; j = j + 1; 
-pass(j) = norm( tril(L(p,:)) - L(p,:)) < 13*tol; j = j + 1; 
+pass(j) = norm( tril(L(p,:)) - L(p,:)) < 20*tol; j = j + 1; 
 
 end

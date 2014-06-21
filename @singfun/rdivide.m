@@ -21,7 +21,7 @@ end
 % Check if inputs are other than SINGFUNs, SMOOTHFUNs or doubles.
 if ( (~isa(f, 'singfun') && ~isa(f, 'smoothfun') && ~isa(f, 'double')) || ...
      (~isa(g, 'singfun') && ~isa(g, 'smoothfun') && ~isa(g, 'double')) )   
-    error('SINGFUN:rdivide', ...
+    error('CHEBFUN:SINGFUN:rdivide:rdivide', ...
         'Input can only be a singfun, a smoothfun or a double')
 end
 
@@ -74,8 +74,9 @@ if ( isa(f, 'singfun') && isa(g, 'singfun') )
         
         pref.extrapolate = 1;
         h = f.constructSmoothPart(@(x) feval(f.smoothPart, x)./ ...
-            feval(g.smoothPart, x), [], [], pref);
-        s = singfun(h, f.exponents - g.exponents, [], [], [], []);
+            feval(g.smoothPart, x), [], pref);
+        data.exponents = f.exponents - g.exponents;
+        s = singfun(h, data);
 
     else
         % Construct the SINGFUN by a direct call to the constructor:

@@ -2,7 +2,7 @@ function pass = test_qr( pref )
 % Test for QR decomposition of a chebfun2. 
 
 if ( nargin == 0 ) 
-    pref = chebfun2pref; 
+    pref = chebfunpref; 
 end 
 
 tol = 100*pref.eps; 

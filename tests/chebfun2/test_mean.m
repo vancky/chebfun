@@ -2,7 +2,7 @@ function pass = test_mean( pref )
 % Check the commands mean
 
 if ( nargin < 1 ) 
-    pref = chebfun2pref; 
+    pref = chebfunpref; 
 end 
 
 tol = pref.eps; 

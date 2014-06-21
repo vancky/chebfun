@@ -3,7 +3,7 @@ function pass = test_times( pref )
 % Alex Townsend, March 2013.
 
 if ( nargin < 1 ) 
-    pref = chebfun2pref; 
+    pref = chebfunpref; 
 end 
 tol = 1e3 * pref.eps; 
 j = 1;
