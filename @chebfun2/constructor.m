@@ -55,7 +55,8 @@ maxRank = prefStruct.maxRank;
 % Get default preferences from the techPref:
 tech = pref.tech();
 tpref = chebfunpref.mergeTechPrefs(pref, tech.techPref);
-minSample = tpref.minSamples; 
+minSample = tpref.minSamples;
+minSample = 9;
 maxSample = tpref.maxLength;
 pseudoLevel = tpref.eps;
 
@@ -223,7 +224,7 @@ while ( ~isHappy && ~failure )
     
     %%% PHASE 1: %%%
     % Do GE with complete pivoting:
-    [pivotValue, pivotPosition, rowValues, colValues, iFail] = CompleteACA(vals, tol, factor);
+    [pivotValue, pivotPosition, rowValues, colValues, extraCols, iFail] = CompleteACA(vals, tol, factor);
     
     strike = 1;
     % grid <= 4*(maxRank-1)+1, see Chebfun2 paper. 
@@ -236,7 +237,7 @@ while ( ~isHappy && ~failure )
         % New tolerance:
         tol = grid.^(2/3) * max( max( abs(domain(:))), 1) * vscale * pseudoLevel;
         % New GE:
-        [pivotValue, pivotPosition, rowValues, colValues, iFail] = CompleteACA(vals, tol, factor);
+        [pivotValue, pivotPosition, rowValues, colValues, extraCols, iFail] = CompleteACA(vals, tol, factor);
         % If the function is 0+noise then stop after three strikes.
         if ( abs(pivotValue(1))<1e4*vscale*tol )
             strike = strike + 1;
@@ -253,8 +254,9 @@ while ( ~isHappy && ~failure )
     % Check if the column and row slices are resolved.
     colData.vscale = domain(3:4);
     tech = pref.tech(); 
-    colChebtech = tech.make(sum(colValues,2), colData);
-    resolvedCols = happinessCheck(colChebtech,[],sum(colValues,2));
+    sphereCols = [colValues ; extraCols(2:end-1,:)];
+    colChebtech = tech.make(sum(sphereCols,2), colData);
+    resolvedCols = happinessCheck(colChebtech,[],sum(sphereCols,2));
     rowData.vscale = domain(1:2);
     rowChebtech = tech.make(sum(rowValues.',2), rowData);
     resolvedRows = happinessCheck(rowChebtech,[],sum(rowValues.',2));
@@ -368,7 +370,7 @@ g = fixTheRank( g , fixedRank );
 
 end
 
-function [pivotValue, pivotElement, rows, cols, ifail] = ...
+function [pivotValue, pivotElement, rows, cols, extraCols, ifail] = ...
     CompleteACA(A, tol, factor)
 % Adaptive Cross Approximation with complete pivoting. This command is
 % the continuous analogue of Gaussian elimination with complete pivoting.
@@ -411,6 +413,11 @@ while ( ( infNorm > tol ) && ( zRows < width / factor) ...
     rows(zRows+1,:) = A(row,:);
     cols(:,zRows+1) = A(:,col);              % Extract the columns.
     PivVal = A(row,col);
+    
+    % now go and get the extra columns (used in Spherefun mode): 
+    idx = getSphereFunIndices( ny );
+    extraCols(:, zRows+1) = A(end:-1:1, idx(col));  % flipud here as well. 
+
     A = A - cols(:,zRows+1)*(rows(zRows+1,:)./PivVal); % One step of GE.
     
     % Keep track of progress.
@@ -533,8 +540,10 @@ elseif ( isa(tech, 'chebtech1') )
     y = chebpts( n, dom(3:4), 1 ); 
     [xx, yy] = meshgrid( x, y ); 
 elseif ( isa(tech, 'fourtech') )
-    x = fourpts( m, dom(1:2) );   % x grid.
-    y = fourpts( n, dom(3:4) );
+    %x = fourpts( m, dom(1:2) );   % x grid.
+    %y = fourpts( n, dom(3:4) );
+    x = linspace(dom(1), dom(2), m); 
+    y = linspace(dom(3), dom(4), n); 
     [xx, yy] = meshgrid( x, y );
 else
     error('CHEBFUN:CHEBFUN2:constructor:points2D:tecType', ...
@@ -556,7 +565,9 @@ if ( isa(tech, 'chebtech2') )
 elseif ( isa(tech, 'chebtech1') )
     x = chebpts( n, dom, 1 );   % x grid.
 elseif ( isa(tech, 'fourtech') )
-    x = fourpts( n, dom );   % x grid.
+    %x = fourpts( n, dom );   % x grid.
+    %x = [x ; dom(2)];
+    x = linspace(dom(1), dom(2), n + 1)'; 
 else
     error('CHEBFUN:CHEBFUN2:constructor:mypoints:techType', ...
         'Unrecognized technology');
@@ -577,7 +588,7 @@ if ( isa(tech, 'chebtech2') )
     nesting = 1:2:grid; 
 elseif ( isa(tech, 'fourtech') )
     % Double sampling on tensor grid:
-    grid = 2^( floor( log2( grid ) + 1 ));
+    grid = 2^( floor( log2( grid ) + 1 )) + 1;
     nesting = 1:2:grid;
 elseif ( isa(tech, 'chebtech1' ) )
     grid = 3 * grid; 
@@ -586,5 +597,15 @@ else
     error('CHEBFUN:CHEBFUN2:constructor:gridRefine:techType', ...
         'Technology is unrecognized.');
 end
+
+end
+
+
+function idx = getSphereFunIndices( n ) 
+% Return indices for the SphereFun columns (used to impose the symmetry): 
+
+mid = (n+1)/2;
+idx = [mid:-1:2 n:-1:mid];
+idx = [mid:n 2:mid];
 
 end
