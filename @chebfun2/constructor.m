@@ -224,7 +224,7 @@ while ( ~isHappy && ~failure )
     
     %%% PHASE 1: %%%
     % Do GE with complete pivoting:
-    [pivotValue, pivotPosition, rowValues, colValues, extraCols, iFail] = CompleteACA(vals, tol, factor);
+    [pivotValue, pivotPosition, rowValues, colValues, extraCols, iFail] = CompleteACA(vals, tol, factor, pref);
     
     strike = 1;
     % grid <= 4*(maxRank-1)+1, see Chebfun2 paper. 
@@ -237,7 +237,7 @@ while ( ~isHappy && ~failure )
         % New tolerance:
         tol = grid.^(2/3) * max( max( abs(domain(:))), 1) * vscale * pseudoLevel;
         % New GE:
-        [pivotValue, pivotPosition, rowValues, colValues, extraCols, iFail] = CompleteACA(vals, tol, factor);
+        [pivotValue, pivotPosition, rowValues, colValues, extraCols, iFail] = CompleteACA(vals, tol, factor, pref);
         % If the function is 0+noise then stop after three strikes.
         if ( abs(pivotValue(1))<1e4*vscale*tol )
             strike = strike + 1;
@@ -254,10 +254,11 @@ while ( ~isHappy && ~failure )
     % Check if the column and row slices are resolved.
     colData.vscale = domain(3:4);
     tech = pref.tech(); 
-    sphereCols = [colValues ; extraCols(2:end-1,:)];
-    colChebtech = tech.make(sum(sphereCols,2), colData);
-    resolvedCols = happinessCheck(colChebtech,[],sum(sphereCols,2));
+    colValues = [colValues ; extraCols(end-1:-1:2,:)];
+    colChebtech = tech.make(sum(colValues,2), colData);
+    resolvedCols = happinessCheck(colChebtech,[],sum(colValues,2));
     rowData.vscale = domain(1:2);
+    rowValues = rowValues(:,1:end-1);
     rowChebtech = tech.make(sum(rowValues.',2), rowData);
     resolvedRows = happinessCheck(rowChebtech,[],sum(rowValues.',2));
     isHappy = resolvedRows & resolvedCols;
@@ -278,13 +279,21 @@ while ( ~isHappy && ~failure )
         if ( ~resolvedCols )
             % Double sampling along columns
             [n, nesting] = gridRefine( n , pref );
-            [xx, yy] = meshgrid(PivPos(:, 1), mypoints(n, domain(3:4), pref));
+            y = mypoints(n, domain(3:4), pref);
+            [xx, yy] = meshgrid(PivPos(:, 1), y);
             colValues = evaluate(op, xx, yy, vectorize);
+            [xx, yy] = meshgrid(pi-PivPos(:, 1), y);
+            extraCols = evaluate(op, xx, yy, vectorize);
             % Find location of pivots on new grid (using nesting property).
             PP(:, 1) = nesting(PP(:, 1));
         else
-            [xx, yy] = meshgrid(PivPos(:, 1), mypoints(n, domain(3:4), pref));
+            y = mypoints(n, domain(3:4), pref);
+            [xx, yy] = meshgrid(PivPos(:, 1), y);
             colValues = evaluate(op, xx, yy, vectorize);
+            th = pi - PivPos(:,1); 
+            x = th + 2*pi*(th < -pi) - 2*pi*(th > pi); 
+            [xx, yy] = meshgrid(x, y);
+            extraCols = evaluate(op, xx, yy, vectorize);
         end
         if ( ~resolvedRows )
             [m, nesting] = gridRefine( m , pref ); 
@@ -297,15 +306,24 @@ while ( ~isHappy && ~failure )
             rowValues = evaluate(op, xx, yy, vectorize);
         end
         
+        % If we are in standard mode, then set the spherefun columns to the empty set:  
+        if ( ~strcmpi( pref.cheb2Prefs.technology, 'spherefun') ) 
+            extraCols = []; 
+        end
+        
         % Do GE on the skeleton to update slices:
         nn = numel(pivotValue);
+        idx = getSphereFunIndices( m );
         for kk = 1:nn-1
-            colValues(:, kk+1:end) = colValues(:, kk+1:end) -...
-                colValues(:, kk)*(rowValues(kk, PP(kk+1:nn, 2))./pivotValue(kk));
+            rankOneUpdate1 = colValues(:,kk)*(rowValues(kk, PP(kk+1:nn, 2))./pivotValue(kk));
+            rankOneUpdate2 = colValues(:,kk)*(rowValues(kk, idx(PP(kk+1:nn, 2))')./pivotValue(kk));
+            colValues(:, kk+1:end) = colValues(:, kk+1:end) - rankOneUpdate1;
+            extraCols(:, kk+1:end) = extraCols(:, kk+1:end) - rankOneUpdate2;
             rowValues(kk+1:end, :) = rowValues(kk+1:end, :) -...
                 colValues(PP(kk+1:nn, 1), kk)*(rowValues(kk, :)./pivotValue(kk));
         end
-        
+        colValues = [colValues ; extraCols(end-1:-1:2,:)];
+        colValues = colValues(:,2); 
         % If function is on rank-1 then make rowValues a row vector:
         if ( nn == 1 )
             rowValues = rowValues(:).';
@@ -342,9 +360,13 @@ while ( ~isHappy && ~failure )
         isHappy = 1;
     end
     
+    if ( strcmpi(pref.cheb2Prefs.technology, 'spherefun' ) ) 
+        domain(4) = domain(4) + diff(domain(3:4));
+    end
+    
     % Construct a CHEBFUN2:
     g.pivotValues = pivotValue;
-    g.cols = chebfun(colValues, domain(3:4), pref);
+    g.cols = chebfun(colValues, domain(3:4), pref );
     g.rows = chebfun(rowValues.', domain(1:2), pref );
     g.pivotLocations = PivPos;
     g.domain = domain;
@@ -371,7 +393,7 @@ g = fixTheRank( g , fixedRank );
 end
 
 function [pivotValue, pivotElement, rows, cols, extraCols, ifail] = ...
-    CompleteACA(A, tol, factor)
+    CompleteACA(A, tol, factor, pref)
 % Adaptive Cross Approximation with complete pivoting. This command is
 % the continuous analogue of Gaussian elimination with complete pivoting.
 % Here, we attempt to adaptively find the numerical rank of the function.
@@ -416,7 +438,7 @@ while ( ( infNorm > tol ) && ( zRows < width / factor) ...
     
     % now go and get the extra columns (used in Spherefun mode): 
     idx = getSphereFunIndices( ny );
-    extraCols(:, zRows+1) = A(end:-1:1, idx(col));  % flipud here as well. 
+    extraCols(:, zRows+1) = A(:, idx(col));  % flipud here as well. 
 
     A = A - cols(:,zRows+1)*(rows(zRows+1,:)./PivVal); % One step of GE.
     
@@ -446,6 +468,11 @@ if ( infNorm <= tol )
 end
 if ( zRows >= (width/factor) )
     ifail = 1;                               % We did fail.
+end
+
+% If we are in standard mode, then set the spherefun columns to the empty set:  
+if ( ~strcmpi( pref.cheb2Prefs.technology, 'spherefun') ) 
+    extraCols = []; 
 end
 
 end
@@ -567,7 +594,7 @@ elseif ( isa(tech, 'chebtech1') )
 elseif ( isa(tech, 'fourtech') )
     %x = fourpts( n, dom );   % x grid.
     %x = [x ; dom(2)];
-    x = linspace(dom(1), dom(2), n + 1)'; 
+    x = linspace(dom(1), dom(2), n)'; 
 else
     error('CHEBFUN:CHEBFUN2:constructor:mypoints:techType', ...
         'Unrecognized technology');
