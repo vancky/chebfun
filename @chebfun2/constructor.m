@@ -56,7 +56,6 @@ maxRank = prefStruct.maxRank;
 tech = pref.tech();
 tpref = chebfunpref.mergeTechPrefs(pref, tech.techPref);
 minSample = tpref.minSamples;
-minSample = 9;
 maxSample = tpref.maxLength;
 pseudoLevel = tpref.eps;
 
@@ -206,26 +205,26 @@ while ( ~isHappy && ~failure )
     grid = minSample; 
     
     % Sample function on a Chebyshev tensor grid:
-    [xx, yy] = points2D(grid, grid, domain, pref);
-    vals = evaluate(op, xx, yy, vectorize);
+    %[xx, yy] = points2D(grid, grid, domain, pref);
+    %vals = evaluate(op, xx, yy, vectorize);
     
     % Does the function blow up or evaluate to NaN?:
-    vscale = max(abs(vals(:)));
-    if ( isinf(vscale) )
-        error('CHEBFUN:CHEBFUN2:constructor:inf', ...
-            'Function returned INF when evaluated');
-    elseif ( any(isnan(vals(:)) ) )
-        error('CHEBFUN:CHEBFUN2:constructor:nan', ...
-            'Function returned NaN when evaluated');
-    end
+%     %vscale = max(abs(vals(:)));
+%     if ( isinf(vscale) )
+%         error('CHEBFUN:CHEBFUN2:constructor:inf', ...
+%             'Function returned INF when evaluated');
+%     elseif ( any(isnan(vals(:)) ) )
+%         error('CHEBFUN:CHEBFUN2:constructor:nan', ...
+%             'Function returned NaN when evaluated');
+%     end
     
     % Two-dimensional version of CHEBFUN's tolerance:
-    tol = grid.^(2/3) * max( max( abs(domain(:))), 1) * vscale * pseudoLevel;
+    %tol = grid.^(2/3) * max( max( abs(domain(:))), 1) * vscale * pseudoLevel;
     
     %%% PHASE 1: %%%
     % Do GE with complete pivoting:
-    [pivotValue, pivotPosition, rowValues, colValues, extraCols, iFail] = CompleteACA(vals, tol, factor, pref);
-    
+    %[pivotValue, pivotPosition, rowValues, colValues, extraCols, iFail] = CompleteACA(vals, tol, factor, pref);
+    iFail = 1; 
     strike = 1;
     % grid <= 4*(maxRank-1)+1, see Chebfun2 paper. 
     while ( iFail && grid <= factor*(maxRank-1)+1 && strike < 3)
@@ -242,8 +241,14 @@ while ( ~isHappy && ~failure )
         if ( abs(pivotValue(1))<1e4*vscale*tol )
             strike = strike + 1;
         end
+        %TODO: Work out how to do skeleton GE so this check can go later: 
+        iFail = iFail || ~happy( colValues, rowValues, extraCols, domain, pref ); 
+        
+        colValues = [colValues ; extraCols(end-1:-1:2,:)];
+        rowValues = rowValues(:, 1:end-1);
     end
     
+    isHappy = 1; 
     % If the rank of the function is above maxRank then stop.
     if ( grid > factor*(maxRank-1)+1 )
         warning('CHEBFUN:CHEBFUN2:constructor:rank', ...
@@ -251,17 +256,17 @@ while ( ~isHappy && ~failure )
         failure = 1; 
     end
     
-    % Check if the column and row slices are resolved.
-    colData.vscale = domain(3:4);
-    tech = pref.tech(); 
-    colValues = [colValues ; extraCols(end-1:-1:2,:)];
-    colChebtech = tech.make(sum(colValues,2), colData);
-    resolvedCols = happinessCheck(colChebtech,[],sum(colValues,2));
-    rowData.vscale = domain(1:2);
-    rowValues = rowValues(:,1:end-1);
-    rowChebtech = tech.make(sum(rowValues.',2), rowData);
-    resolvedRows = happinessCheck(rowChebtech,[],sum(rowValues.',2));
-    isHappy = resolvedRows & resolvedCols;
+%     % Check if the column and row slices are resolved.
+%     colData.vscale = domain(3:4);
+%     tech = pref.tech(); 
+%     colValues = [colValues ; extraCols(end-1:-1:2,:)];
+%     colChebtech = tech.make(sum(colValues,2), colData);
+%     resolvedCols = happinessCheck(colChebtech,[],sum(colValues,2));
+%     rowData.vscale = domain(1:2);
+%     rowValues = rowValues(:,1:end-1);
+%     rowChebtech = tech.make(sum(rowValues.',2), rowData);
+%     resolvedRows = happinessCheck(rowChebtech,[],sum(rowValues.',2));
+%     isHappy = resolvedRows & resolvedCols;
     
     % If the function is zero, set midpoint of domain as pivot location.
     if ( length(pivotValue) == 1 && pivotValue == 0 )
@@ -271,83 +276,82 @@ while ( ~isHappy && ~failure )
         PivPos = [xx(1, pivotPosition(:, 2)); yy(pivotPosition(:, 1), 1).'].';
         PP = pivotPosition;
     end
-    
-    %%% PHASE 2: %%%
-    % Now resolve along the column and row slices:
-    n = grid;  m = grid;
-    while ( ~isHappy )
-        if ( ~resolvedCols )
-            % Double sampling along columns
-            [n, nesting] = gridRefine( n , pref );
-            y = mypoints(n, domain(3:4), pref);
-            [xx, yy] = meshgrid(PivPos(:, 1), y);
-            colValues = evaluate(op, xx, yy, vectorize);
-            [xx, yy] = meshgrid(pi-PivPos(:, 1), y);
-            extraCols = evaluate(op, xx, yy, vectorize);
-            % Find location of pivots on new grid (using nesting property).
-            PP(:, 1) = nesting(PP(:, 1));
-        else
-            y = mypoints(n, domain(3:4), pref);
-            [xx, yy] = meshgrid(PivPos(:, 1), y);
-            colValues = evaluate(op, xx, yy, vectorize);
-            th = pi - PivPos(:,1); 
-            x = th + 2*pi*(th < -pi) - 2*pi*(th > pi); 
-            [xx, yy] = meshgrid(x, y);
-            extraCols = evaluate(op, xx, yy, vectorize);
-        end
-        if ( ~resolvedRows )
-            [m, nesting] = gridRefine( m , pref ); 
-            [xx, yy] = meshgrid(mypoints(m, domain(1:2), pref), PivPos(:, 2));
-            rowValues = evaluate(op, xx, yy, vectorize);
-            % find location of pivots on new grid  (using nesting property).
-            PP(:, 2) = nesting(PP(:, 2));
-        else
-            [xx, yy] = meshgrid(mypoints(m, domain(1:2), pref), PivPos(:, 2));
-            rowValues = evaluate(op, xx, yy, vectorize);
-        end
-        
-        % If we are in standard mode, then set the spherefun columns to the empty set:  
-        if ( ~strcmpi( pref.cheb2Prefs.technology, 'spherefun') ) 
-            extraCols = []; 
-        end
-        
-        % Do GE on the skeleton to update slices:
-        nn = numel(pivotValue);
-        idx = getSphereFunIndices( m );
-        for kk = 1:nn-1
-            rankOneUpdate1 = colValues(:,kk)*(rowValues(kk, PP(kk+1:nn, 2))./pivotValue(kk));
-            rankOneUpdate2 = colValues(:,kk)*(rowValues(kk, idx(PP(kk+1:nn, 2))')./pivotValue(kk));
-            colValues(:, kk+1:end) = colValues(:, kk+1:end) - rankOneUpdate1;
-            extraCols(:, kk+1:end) = extraCols(:, kk+1:end) - rankOneUpdate2;
-            rowValues(kk+1:end, :) = rowValues(kk+1:end, :) -...
-                colValues(PP(kk+1:nn, 1), kk)*(rowValues(kk, :)./pivotValue(kk));
-        end
-        colValues = [colValues ; extraCols(end-1:-1:2,:)];
-        colValues = colValues(:,2); 
-        % If function is on rank-1 then make rowValues a row vector:
-        if ( nn == 1 )
-            rowValues = rowValues(:).';
-        end
-        
-        % Are the columns and rows resolved now?
-        if ( ~resolvedCols )
-            colChebtech = tech.make(sum(colValues,2));
-            resolvedCols = happinessCheck(colChebtech,[],sum(colValues,2));
-        end
-        if ( ~resolvedRows )
-            rowChebtech = tech.make(sum(rowValues.',2));
-            resolvedRows = happinessCheck(rowChebtech,[],sum(rowValues.',2));
-        end
-        isHappy = resolvedRows & resolvedCols;
-        
-        % STOP if degree is over maxLength:
-        if ( max(m, n) >= maxSample )
-            warning('CHEBFUN:CHEBFUN2:constructor:notResolved', ...
-                'Unresolved with maximum CHEBFUN length: %u.', maxSample);
-            failure = 1;
-        end
-        
-    end
+%     
+%     %%% PHASE 2: %%%
+%     % Now resolve along the column and row slices:
+%     n = grid;  m = grid;
+%     while ( ~isHappy )
+%         if ( ~resolvedCols )
+%             % Double sampling along columns
+%             [n, nesting] = gridRefine( n , pref );
+%             y = mypoints(n, domain(3:4), pref);
+%             [xx, yy] = meshgrid(PivPos(:, 1), y);
+%             colValues = evaluate(op, xx, yy, vectorize);
+%             [xx, yy] = meshgrid(pi-PivPos(:, 1), y);
+%             extraCols = evaluate(op, xx, yy, vectorize);
+%             % Find location of pivots on new grid (using nesting property).
+%             PP(:, 1) = nesting(PP(:, 1));
+%         else
+%             y = mypoints(n, domain(3:4), pref);
+%             [xx, yy] = meshgrid(PivPos(:, 1), y);
+%             colValues = evaluate(op, xx, yy, vectorize);
+%             th = pi - PivPos(:,1); 
+%             x = th + 2*pi*(th < -pi) - 2*pi*(th > pi); 
+%             [xx, yy] = meshgrid(x, y);
+%             extraCols = evaluate(op, xx, yy, vectorize);
+%         end
+%         if ( ~resolvedRows )
+%             [m, nesting] = gridRefine( m , pref ); 
+%             [xx, yy] = meshgrid(mypoints(m, domain(1:2), pref), PivPos(:, 2));
+%             rowValues = evaluate(op, xx, yy, vectorize);
+%             % find location of pivots on new grid  (using nesting property).
+%             PP(:, 2) = nesting(PP(:, 2));
+%         else
+%             [xx, yy] = meshgrid(mypoints(m, domain(1:2), pref), PivPos(:, 2));
+%             rowValues = evaluate(op, xx, yy, vectorize);
+%         end
+%         
+%         % If we are in standard mode, then set the spherefun columns to the empty set:  
+%         if ( ~strcmpi( pref.cheb2Prefs.technology, 'spherefun') ) 
+%             extraCols = []; 
+%         end
+%         
+%         % Do GE on the skeleton to update slices:
+%         nn = numel(pivotValue);
+%         idx = getSphereFunIndices( m );
+%         for kk = 1:nn-1
+%             rankOneUpdate1 = colValues(:,kk)*(rowValues(kk, PP(kk+1:nn, 2))./pivotValue(kk));
+%             rankOneUpdate2 = colValues(:,kk)*(rowValues(kk, idx(PP(kk+1:nn, 2))')./pivotValue(kk));
+%             colValues(:, kk+1:end) = colValues(:, kk+1:end) - rankOneUpdate1;
+%             extraCols(:, kk+1:end) = extraCols(:, kk+1:end) - rankOneUpdate2;
+%             rowValues(kk+1:end, :) = rowValues(kk+1:end, :) -...
+%                 colValues(PP(kk+1:nn, 1), kk)*(rowValues(kk, :)./pivotValue(kk));
+%         end
+%         colValues = [colValues ; extraCols(end-1:-1:2,:)];
+%         % If function is on rank-1 then make rowValues a row vector:
+%         if ( nn == 1 )
+%             rowValues = rowValues(:).';
+%         end
+%         
+%         % Are the columns and rows resolved now?
+%         if ( ~resolvedCols )
+%             colChebtech = tech.make(sum(colValues,2));
+%             resolvedCols = happinessCheck(colChebtech,[],sum(colValues,2));
+%         end
+%         if ( ~resolvedRows )
+%             rowChebtech = tech.make(sum(rowValues.',2));
+%             resolvedRows = happinessCheck(rowChebtech,[],sum(rowValues.',2));
+%         end
+%         isHappy = resolvedRows & resolvedCols;
+%         
+%         % STOP if degree is over maxLength:
+%         if ( max(m, n) >= maxSample )
+%             warning('CHEBFUN:CHEBFUN2:constructor:notResolved', ...
+%                 'Unresolved with maximum CHEBFUN length: %u.', maxSample);
+%             failure = 1;
+%         end
+%        
+%    end
     
     % For some reason, on some computers simplify is giving back a scalar zero.
     % In which case the function is numerically zero. Artifically set the
@@ -371,24 +375,24 @@ while ( ~isHappy && ~failure )
     g.pivotLocations = PivPos;
     g.domain = domain;
     
-    % Sample Test:
-    if ( sampleTest )
-        % wrap the op with evaluate in case the 'vectorize' flag is on: 
-        sampleOP = @(x,y) evaluate( op, x, y, vectorize);
-        
-        % Evaluate at points in the domain:
-        pass = g.sampleTest( sampleOP, tol, vectorize);
-        if ( ~pass )
-            % Increase minSamples and try again.
-            minSample = gridRefine( minSample, pref );
-            isHappy = 0;
-        end
-    end
-    
+%     % Sample Test:
+%     if ( sampleTest )
+%         % wrap the op with evaluate in case the 'vectorize' flag is on: 
+%         sampleOP = @(x,y) evaluate( op, x, y, vectorize);
+%         
+%         % Evaluate at points in the domain:
+%         pass = g.sampleTest( sampleOP, tol, vectorize);
+%         if ( ~pass )
+%             % Increase minSamples and try again.
+%             minSample = gridRefine( minSample, pref );
+%             isHappy = 0;
+%         end
+%     end
+%    
 end
 
 % Fix the rank, if in nonadaptive mode.
-g = fixTheRank( g , fixedRank );
+%g = fixTheRank( g , fixedRank );
 
 end
 
@@ -428,6 +432,7 @@ if ( scl == 0 )
 else
     rows(1,:) = zeros(1, size(A, 2));
     cols(:,1) = zeros(size(A, 1), 1);
+    extraCols = cols(:,1);
 end
 
 while ( ( infNorm > tol ) && ( zRows < width / factor) ...
@@ -635,4 +640,18 @@ mid = (n+1)/2;
 idx = [mid:-1:2 n:-1:mid];
 idx = [mid:n 2:mid];
 
+end
+
+function isHappy = happy( colValues, rowValues, extraCols, domain, pref )
+        % Check if the column and row slices are resolved.
+        colData.vscale = domain(3:4);
+        tech = pref.tech(); 
+        colValues = [colValues ; extraCols(end-1:-1:2,:)];
+        colChebtech = tech.make(sum(colValues,2), colData);
+        resolvedCols = happinessCheck(colChebtech,[],sum(colValues,2));
+        rowData.vscale = domain(1:2);
+        rowValues = rowValues(:,1:end-1);
+        rowChebtech = tech.make(sum(rowValues.',2), rowData);
+        resolvedRows = happinessCheck(rowChebtech,[],sum(rowValues.',2));
+        isHappy = resolvedRows & resolvedCols; 
 end
