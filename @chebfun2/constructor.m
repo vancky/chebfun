@@ -42,47 +42,63 @@ end
 if ( nargin < 3 || isempty(dom) )
     dom = [-1 1 -1 1];
 end
-% Get preferences:
+
+% Get default preferences
+rowPref = chebfunpref();
+colPref = rowPref;
+
+% Get preferences if they were passed in
 if ( nargin > 3 && isa(varargin{1}, 'chebfunpref') )
-    pref = chebfunpref(varargin{1});
-else
-    pref = chebfunpref();
+    rowPref = chebfunpref(varargin{1});
+    % Support chebfun2(op, dom, rowPref, colPref);
+    if nargin > 4 && isa(varargin{2}, 'chebfunpref')
+        colPref = chebfunpref(varargin{2});
+    % Support chebfun2(op, dom, rowColpref);
+    else
+        colPref = rowPref;
+    end
 end
 
-if ( isa(dom, 'chebfunpref') )
-    % Support chebfun2(op, pref);
-    pref = dom;
+% Support chebfun2(op, pref);
+if ( isa(dom, 'chebfunpref') )    
+    rowPref = dom;
+    colPref = rowPref;
+    % Also support chebfun2(op, pref, pref);
+    if nargin > 3 && isa(varargin{1}, 'chebfunpref')
+        colPref = varargin{1};
+    end
     dom = [-1 1 -1 1];
 end
     
 % Get default preferences from chebfunpref:
-prefStruct = pref.cheb2Prefs;
-sampleTest = prefStruct.sampleTest;
-maxRank = prefStruct.maxRank;
-
-% Get default preferences from the techPref:
-tech = pref.tech();
-tpref = chebfunpref.mergeTechPrefs(pref, tech.techPref);
-minSample = tpref.minSamples; 
-maxSample = tpref.maxLength;
-pseudoLevel = tpref.eps;
+rowPrefStruct = rowPref.cheb2Prefs;
+colPrefStruct = colPref.cheb2Prefs;
+% Do sample test if indicated in either the row or column preferences.
+sampleTest = rowPrefStruct.sampleTest || colPrefStruct.sampleTest;
+% Take the maximum of the ranks indicated by the row or column preferences.
+maxRank = max(rowPrefStruct.maxRank,colPrefStruct.maxRank);
 
 if ( any(strcmpi(dom, 'periodic')) )
-        % If periodic flag, then map chebfun2 with fourtechs. 
-        pref.tech = @fourtech;
-        tpref = chebfunpref.mergeTechPrefs(pref, tech.techPref);
-        minSample = tpref.minSamples;
-        maxSample = tpref.maxLength;
-        pseudoLevel = tpref.eps;
-        dom = [-1 1 -1 1];
+    % If periodic flag, then map chebfun2 with fourtechs. 
+    rowPref.tech = @fourtech;
+    colPref.tech = @fourtech;
+    dom = [-1 1 -1 1];
 elseif ( (nargin > 3) && (any(strcmpi(varargin{1}, 'periodic'))) )
-        % If periodic flag, then map chebfun2 with fourtechs. 
-        pref.tech = @fourtech; 
-        tpref = chebfunpref.mergeTechPrefs(pref, tech.techPref);
-        minSample = tpref.minSamples;
-        maxSample = tpref.maxLength;
-        pseudoLevel = tpref.eps;
+    % If periodic flag, then map chebfun2 with fourtechs. 
+    rowPref.tech = @fourtech;
+    colPref.tech = @fourtech;
 end
+% Get default preferences from the techPref:
+rowTechType = rowPref.tech();
+colTechType = colPref.tech();
+
+tprefRow = chebfunpref.mergeTechPrefs(rowPref, rowTechType.techPref);
+tprefCol = chebfunpref.mergeTechPrefs(colPref, colTechType.techPref);
+minRowSample = tprefRow.minSamples; 
+maxRowSample = tprefRow.maxLength;
+minColSample = tprefCol.minSamples; 
+maxColSample = tprefCol.maxLength;
+pseudoLevel = max(tprefRow.eps,tprefCol.eps);
 
 if ( isa(op, 'double') )    % CHEBFUN2( DOUBLE )
     if ( numel( op ) == 1 )
@@ -122,17 +138,17 @@ if ( isa(op, 'double') )    % CHEBFUN2( DOUBLE )
         % The tolerance assumes the samples are from a function. It depends
         % on the size of the sample matrix, hscale of domain, vscale of
         % the samples, and the accuracy target in chebfun2 preferences. 
-        grid = max( size( op ) ); 
+        [gridRow,gridCol] = size( op ); 
         vscale = max( abs(op(:)) ); 
-        tol = grid.^(2/3) * max( max( abs(dom(:))), 1) * vscale * pseudoLevel;
+        tol = max(gridRow,gridCol).^(2/3) * max( max( abs(dom(:))), 1) * vscale * pseudoLevel;
         
         % Perform GE with complete pivoting:
         [pivotValue, ignored, rowValues, colValues] = CompleteACA(op, tol, 0);
         
         % Construct a CHEBFUN2:
         g.pivotValues = pivotValue;
-        g.cols = chebfun(colValues, dom(3:4), pref );
-        g.rows = chebfun(rowValues.', dom(1:2), pref );
+        g.cols = chebfun(colValues, dom(3:4), colPref );
+        g.rows = chebfun(rowValues.', dom(1:2), rowPref );
         g.domain = dom;
         
         % Did we have a nonadaptive construction?:
@@ -208,7 +224,7 @@ if ( vectorize == 0 ) % another check
              'Turning on the ''vectorize'' flag. Did you intend this?\n', ...
              'Use the ''vectorize'' flag in the CHEBFUN2 constructor\n', ...
              'call to avoid this warning message.']);
-        g = chebfun2(op, dom, 'vectorize', pref);
+        g = chebfun2(op, dom, 'vectorize', rowPref, colPref);
         return
     end
 end
@@ -217,10 +233,11 @@ factor = 4;  % ratio between size of matrix and no. pivots.
 isHappy = 0; % If we are currently unresolved. 
 failure = 0; % Reached max discretization size without being happy. 
 while ( ~isHappy && ~failure )
-    grid = minSample; 
+    gridRow = minRowSample;
+    gridCol = minColSample;
     
     % Sample function on a Chebyshev tensor grid:
-    [xx, yy] = points2D(grid, grid, dom, pref);
+    [xx, yy] = points2D(gridRow, gridCol, dom, rowPref, colPref);
     vals = evaluate(op, xx, yy, vectorize);
     
     % Does the function blow up or evaluate to NaN?:
@@ -234,7 +251,7 @@ while ( ~isHappy && ~failure )
     end
     
     % Two-dimensional version of CHEBFUN's tolerance:
-    tol = grid.^(2/3) * max( max( abs(dom(:))), 1) * vscale * pseudoLevel;
+    tol = max(gridRow,gridCol).^(2/3) * max( max( abs(dom(:))), 1) * vscale * pseudoLevel;
     
     %%% PHASE 1: %%%
     % Do GE with complete pivoting:
@@ -242,14 +259,15 @@ while ( ~isHappy && ~failure )
     
     strike = 1;
     % grid <= 4*(maxRank-1)+1, see Chebfun2 paper. 
-    while ( iFail && grid <= factor*(maxRank-1)+1 && strike < 3)
+    while ( iFail && gridRow <= factor*(maxRank-1)+1 && strike < 3)
         % Refine sampling on tensor grid:
-        grid = gridRefine( grid , pref);
-        [xx, yy] = points2D(grid, grid, dom, pref);
+        gridRow = gridRefine( gridRow , rowPref);
+        gridCol = gridRefine( gridCol , colPref);
+        [xx, yy] = points2D(gridRow, gridCol, dom, rowPref, colPref);
         vals = evaluate(op, xx, yy, vectorize); % resample
         vscale = max(abs(vals(:)));
         % New tolerance:
-        tol = grid.^(2/3) * max( max( abs(dom(:))), 1) * vscale * pseudoLevel;
+        tol = max(gridRow,gridCol).^(2/3) * max( max( abs(dom(:))), 1) * vscale * pseudoLevel;
         % New GE:
         [pivotValue, pivotPosition, rowValues, colValues, iFail] = CompleteACA(vals, tol, factor);
         % If the function is 0+noise then stop after three strikes.
@@ -259,7 +277,7 @@ while ( ~isHappy && ~failure )
     end
     
     % If the rank of the function is above maxRank then stop.
-    if ( grid > factor*(maxRank-1)+1 )
+    if ( min(gridRow,gridCol) > factor*(maxRank-1)+1 )
         warning('CHEBFUN:CHEBFUN2:constructor:rank', ...
             'Not a low-rank function.');
         failure = 1; 
@@ -267,12 +285,13 @@ while ( ~isHappy && ~failure )
     
     % Check if the column and row slices are resolved.
     colData.vscale = dom(3:4);
-    tech = pref.tech(); 
-    colChebtech = tech.make(sum(colValues,2), colData);
-    resolvedCols = happinessCheck(colChebtech,[],sum(colValues,2));
+    colTechType = colPref.tech(); 
+    colTech = colTechType.make(sum(colValues,2), colData);
+    resolvedCols = happinessCheck(colTech,[],sum(colValues,2));
     rowData.vscale = dom(1:2);
-    rowChebtech = tech.make(sum(rowValues.',2), rowData);
-    resolvedRows = happinessCheck(rowChebtech,[],sum(rowValues.',2));
+    rowTechType = rowPref.tech();
+    rowTech = rowTechType.make(sum(rowValues.',2), rowData);
+    resolvedRows = happinessCheck(rowTech,[],sum(rowValues.',2));
     isHappy = resolvedRows & resolvedCols;
     
     % If the function is zero, set midpoint of domain as pivot location.
@@ -286,27 +305,27 @@ while ( ~isHappy && ~failure )
     
     %%% PHASE 2: %%%
     % Now resolve along the column and row slices:
-    n = grid;  m = grid;
+    n = gridCol;  m = gridRow;
     while ( ~isHappy )
         if ( ~resolvedCols )
             % Double sampling along columns
-            [n, nesting] = gridRefine( n , pref );
-            [xx, yy] = meshgrid(PivPos(:, 1), mypoints(n, dom(3:4), pref));
+            [n, nesting] = gridRefine( n , colPref );
+            [xx, yy] = meshgrid(PivPos(:, 1), mypoints(n, dom(3:4), colPref));
             colValues = evaluate(op, xx, yy, vectorize);
             % Find location of pivots on new grid (using nesting property).
             PP(:, 1) = nesting(PP(:, 1));
         else
-            [xx, yy] = meshgrid(PivPos(:, 1), mypoints(n, dom(3:4), pref));
+            [xx, yy] = meshgrid(PivPos(:, 1), mypoints(n, dom(3:4), colPref));
             colValues = evaluate(op, xx, yy, vectorize);
         end
         if ( ~resolvedRows )
-            [m, nesting] = gridRefine( m , pref ); 
-            [xx, yy] = meshgrid(mypoints(m, dom(1:2), pref), PivPos(:, 2));
+            [m, nesting] = gridRefine( m , rowPref ); 
+            [xx, yy] = meshgrid(mypoints(m, dom(1:2), rowPref), PivPos(:, 2));
             rowValues = evaluate(op, xx, yy, vectorize);
             % find location of pivots on new grid  (using nesting property).
             PP(:, 2) = nesting(PP(:, 2));
         else
-            [xx, yy] = meshgrid(mypoints(m, dom(1:2), pref), PivPos(:, 2));
+            [xx, yy] = meshgrid(mypoints(m, dom(1:2), rowPref), PivPos(:, 2));
             rowValues = evaluate(op, xx, yy, vectorize);
         end
         
@@ -326,19 +345,19 @@ while ( ~isHappy && ~failure )
         
         % Are the columns and rows resolved now?
         if ( ~resolvedCols )
-            colChebtech = tech.make(sum(colValues,2));
-            resolvedCols = happinessCheck(colChebtech,[],sum(colValues,2));
+            colTech = colTechType.make(sum(colValues,2));
+            resolvedCols = happinessCheck(colTech,[],sum(colValues,2));
         end
         if ( ~resolvedRows )
-            rowChebtech = tech.make(sum(rowValues.',2));
-            resolvedRows = happinessCheck(rowChebtech,[],sum(rowValues.',2));
+            rowTech = rowTechType.make(sum(rowValues.',2));
+            resolvedRows = happinessCheck(rowTech,[],sum(rowValues.',2));
         end
         isHappy = resolvedRows & resolvedCols;
         
         % STOP if degree is over maxLength:
-        if ( max(m, n) >= maxSample )
+        if ( max(m, n) >= min(maxRowSample,maxColSample) )
             warning('CHEBFUN:CHEBFUN2:constructor:notResolved', ...
-                'Unresolved with maximum CHEBFUN length: %u.', maxSample);
+                'Unresolved with maximum CHEBFUN length: %u.', max(maxRowSample,maxColSample));
             failure = 1;
         end
         
@@ -357,8 +376,8 @@ while ( ~isHappy && ~failure )
     
     % Construct a CHEBFUN2:
     g.pivotValues = pivotValue;
-    g.cols = chebfun(colValues, dom(3:4), pref);
-    g.rows = chebfun(rowValues.', dom(1:2), pref );
+    g.cols = chebfun(colValues, dom(3:4), colPref );
+    g.rows = chebfun(rowValues.', dom(1:2), rowPref );
     g.pivotLocations = PivPos;
     g.domain = dom;
     
@@ -371,7 +390,8 @@ while ( ~isHappy && ~failure )
         pass = g.sampleTest( sampleOP, tol, vectorize);
         if ( ~pass )
             % Increase minSamples and try again.
-            minSample = gridRefine( minSample, pref );
+            minRowSample = gridRefine( minRowSample, rowPref );
+            minColSample = gridRefine( minColSample, colPref );
             isHappy = 0;
         end
     end
@@ -532,7 +552,7 @@ end
 end
 
 
-function [xx, yy] = points2D(m, n, dom, pref)
+function [xx, yy] = points2D(m, n, dom, pref, colPref)
 % Get the sample points that correspond to the right grid for a particular
 % technology.
 
@@ -541,20 +561,29 @@ tech = pref.tech();
 
 if ( isa(tech, 'chebtech2') )
     x = chebpts( m, dom(1:2), 2 );   % x grid.
-    y = chebpts( n, dom(3:4), 2 ); 
-    [xx, yy] = meshgrid( x, y ); 
 elseif ( isa(tech, 'chebtech1') )
     x = chebpts( m, dom(1:2), 1 );   % x grid.
-    y = chebpts( n, dom(3:4), 1 ); 
-    [xx, yy] = meshgrid( x, y ); 
 elseif ( isa(tech, 'fourtech') )
     x = fourpts( m, dom(1:2) );   % x grid.
-    y = fourpts( n, dom(3:4) );
-    [xx, yy] = meshgrid( x, y );
 else
     error('CHEBFUN:CHEBFUN2:constructor:points2D:tecType', ...
         'Unrecognized technology');
 end
+
+tech2 = colPref.tech();
+
+if ( isa(tech2, 'chebtech2') )
+    y = chebpts( n, dom(3:4), 2 ); 
+elseif ( isa(tech2, 'chebtech1') )
+    y = chebpts( n, dom(3:4), 1 ); 
+elseif ( isa(tech2, 'fourtech') )
+    y = fourpts( n, dom(3:4) );
+else
+    error('CHEBFUN:CHEBFUN2:constructor:points2D:tecType', ...
+        'Unrecognized technology');
+end
+
+[xx, yy] = meshgrid( x, y );
 
 end
 
