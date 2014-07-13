@@ -16,21 +16,10 @@ if ( isempty(f) )
     return
 end
 
-% Get the degree of the CHEBFUN2:[m, n] = length(f); 
-[m, n] = length( f ); 
-%vscl = max( abs( f.pivotValues(1) ) ); 
-
-% If F is of low degree, then oversample: 
-m = max(m, 9); 
-n = max(n, 9); 
-
-% Calculate values on a tensor grid: 
-X = rot90( chebcoeffs2( f ), 2 ); 
-X(size(X,1)+1:m, :) = 0; X(:, size(X,2)+1) = 0;  % pad
-X = rot90(X, 2); 
-vals = chebfun2.coeffs2vals( X ); 
-
-% Take the absolute maximum: 
-vscl = max(abs(vals(:))); 
+% Calculate absolute value of first GE pivot: 
+maxCols = vscale( f.cols(:, 1) ); 
+maxRows = vscale( f.rows(:, 1) );
+pivValue = abs( f.pivotValues(1) ); 
+vscl = maxCols * maxRows ./ pivValue; 
 
 end
