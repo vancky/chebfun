@@ -62,7 +62,7 @@ end
 % Choose the appropriate function based on the length of the values to be
 % interpolated:
 if ( rem(n, 2) == 0 )
-    s = cot(sum(xj)/2);
+    s = cot(sum(xk)/2);
     ctsc = @(x) cot(x) + s;
 else
     ctsc = @(x) csc(x);
