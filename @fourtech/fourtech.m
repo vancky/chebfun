@@ -214,7 +214,7 @@ classdef fourtech < smoothfun
 
         % True if any element of a FOURTECH is a nonzero number, ignoring NaN.
         a = any(f, dim)
-
+        
         % Convert an array of FOURTECH objects into an array-valued FOURTECH.
         f = cell2mat(f)
 
@@ -408,6 +408,9 @@ classdef fourtech < smoothfun
         % Aliasing:
         coeffs = alias(coeffs, m)
         
+        % Barycentric weights for n equispaced pionts:
+        w = barywts(n)
+
         % Compute Fourier points (x) and optionally quadrature (w)
         % and barycentric (v) weights:
         [x, w, v] = fourpts(n);

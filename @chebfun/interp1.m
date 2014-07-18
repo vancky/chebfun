@@ -75,6 +75,8 @@ end
 switch method
     case 'poly'
         p = interp1Poly(x, y, dom);
+    case 'trig'
+        p = interp1Trig(x, y, dom);
     case 'spline'
         p = chebfun.spline(x, y, dom);
     case {'pchip', 'cubic'}
@@ -99,6 +101,19 @@ f = @(z) bary(z, y, x, w);
 p = chebfun(f, dom, length(x));
 
 end
+
+function p = interp1Trig(x, y, dom)
+% Trigonometric interpolation
+
+% Compute barycentric weights for these points:
+w = baryWeights(x);
+% Define the interpolant using CHEBTECH.BARY():
+f = @(z) trigBary(z, y, x, w);
+% Construct a CHEBFUN:
+p = chebfun(f, dom, 'periodic');
+
+end
+
 
 function p = interp1Linear(x, y, dom)
 % Linear interpolation
