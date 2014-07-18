@@ -1,5 +1,5 @@
-function w = trigBaryWeights(x)
-%BARYWEIGHTS   Barycentric weights for trigonometric interpolation.
+function w = trigBarywts(x)
+%TRIGBARYWTS   Barycentric weights for trigonometric interpolation.
 %   W = TRIGBARYWEIGHTS(X) returns scaled barycentric weights for the points 
 %   in the columm vector X. The weights are scaled such that norm(W, inf) == 1.
 

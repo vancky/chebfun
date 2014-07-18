@@ -106,7 +106,7 @@ function p = interp1Trig(x, y, dom)
 % Trigonometric interpolation
 
 % Compute barycentric weights for these points:
-w = baryWeights(x);
+w = trigBarywts(x);
 % Define the interpolant using CHEBTECH.BARY():
 f = @(z) trigBary(z, y, x, w);
 % Construct a CHEBFUN:
