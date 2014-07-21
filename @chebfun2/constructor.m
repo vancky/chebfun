@@ -53,7 +53,7 @@ if ( nargin > 3 && isa(varargin{1}, 'chebfunpref') )
     % Support chebfun2(op, dom, rowPref, colPref);
     if nargin > 4 && isa(varargin{2}, 'chebfunpref')
         colPref = chebfunpref(varargin{2});
-    % Support chebfun2(op, dom, rowColpref);
+    % Support chebfun2(op, dom, rowAndColpref);
     else
         colPref = rowPref;
     end
@@ -78,15 +78,35 @@ sampleTest = rowPrefStruct.sampleTest || colPrefStruct.sampleTest;
 % Take the maximum of the ranks indicated by the row or column preferences.
 maxRank = max(rowPrefStruct.maxRank,colPrefStruct.maxRank);
 
-if ( any(strcmpi(dom, 'periodic')) )
+if ( any(strcmpi(dom, 'periodic')) || any(strcmpi(dom, 'xyperiodic')))
     % If periodic flag, then map chebfun2 with fourtechs. 
     rowPref.tech = @fourtech;
     colPref.tech = @fourtech;
     dom = [-1 1 -1 1];
-elseif ( (nargin > 3) && (any(strcmpi(varargin{1}, 'periodic'))) )
-    % If periodic flag, then map chebfun2 with fourtechs. 
+elseif ( any(strcmpi(dom, 'xperiodic')) )
+    % If periodic flag is set only for x-direction, then map chebfun2 with 
+    % rowTechs as fourtechs. 
     rowPref.tech = @fourtech;
+    dom = [-1 1 -1 1];
+elseif ( any(strcmpi(dom, 'yperiodic')) )
+    % If periodic flag is set only for y-direction, then map chebfun2 with 
+    % colTechs as fourtechs. 
     colPref.tech = @fourtech;
+    dom = [-1 1 -1 1];
+elseif ( (nargin > 3) )
+    if ( any(strcmpi(varargin{1}, 'periodic')) || any(strcmpi(dom, 'xyperiodic')) )
+        % If periodic flag, then map chebfun2 with fourtechs. 
+        rowPref.tech = @fourtech;
+        colPref.tech = @fourtech;
+    elseif ( any(strcmpi(dom, 'xperiodic')) )
+        % If periodic flag is set only for x-direction, then map chebfun2 with 
+        % rowTechs as fourtechs. 
+        rowPref.tech = @fourtech;
+    elseif ( any(strcmpi(dom, 'yperiodic')) )
+        % If periodic flag is set only for y-direction, then map chebfun2 with 
+        % colTechs as fourtechs. 
+        colPref.tech = @fourtech;
+    end        
 end
 % Get default preferences from the techPref:
 rowTechType = rowPref.tech();
