@@ -5,8 +5,8 @@ function fx = trigBary(x, fvals, xk, vk)
 %   the points X. Note that XK and VK should be column vectors, and FVALS, 
 %   XK, and VK should have the same length.
 %
-%   TRIGBARY(X, FVALS) assumes XK are equally spaced points and VK are the
-%   corresponding barycentric weights.
+%   TRIGBARY(X, FVALS) assumes XK are equally spaced points in [-pi, pi) 
+%   and VK are the corresponding barycentric weights.
 %
 %   If size(FVALS, 2) > 1 then TRIGBARY(X, FVALS) returns values in the form
 %   [F_1(X), F_2(X), ...], where size(F_k(X)) = size(X) for each k.

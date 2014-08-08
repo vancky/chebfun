@@ -66,8 +66,11 @@ end
 
 % With zero denominator degree, the denominator polynomial is trivial.
 if ( n == 0 )
-    qk = 1;
-    q = chebfun(1, dom);
+    if ( isa(f.funs{1}.onefun, 'fourtech') ) 
+        q = chebfun(1, dom, 'periodic');
+    else
+        q = chebfun(1, dom);
+    end    
     qmin = q;
 end
 
@@ -89,8 +92,14 @@ end
 % Run the main algorithm.
 while ( (delta/normf > opts.tol) && (iter < opts.maxIter) && (diffx > 0) )
     fk = feval(f, xk);     % Evaluate on the exchange set.
-    w = baryWeights(xk);   % Barycentric weights for exchange set.
-
+    
+    % Barycentric weights for exchange set.
+    if ( isa(f.funs{1}.onefun, 'fourtech') )         
+        w = trigBarywts(xk);
+    else
+        w = baryWeights(xk);   
+    end
+    
     % Compute trial function and levelled reference error.
     if ( n == 0 )
         [p, h] = computeTrialFunctionPolynomial(fk, xk, w, m, N, dom);
@@ -259,7 +268,7 @@ function xk = getInitialReference(f, m, n, N)
 % If doing rational Remez, get initial reference from trial function generated
 % by CF or Chebyshev-Pade.
 flag = 0;
-if ( n > 0 )
+if ( n >= 0 )
     if ( numel(f.funs) == 1 )
         %[p, q] = chebpade(f, m, n);
         [p, q] = cf(f, m, n);
@@ -270,10 +279,14 @@ if ( n > 0 )
     [xk, err, e, flag] = exchange([], 0, 2, f, p, q, N + 2);
 end
 
-% In the polynomial case or if the above procedure failed to produce a reference
-% with enough equioscillation points, just use the Chebyshev points.
-if ( flag == 0 )
-    xk = chebpts(N + 2, f.domain([1, end]));
+% If the above procedure failed to produce a reference with enough 
+% equioscillation points, just use the Chebyshev points.
+if ( flag == 0 )    
+    if ( isa(f.funs{1}.onefun, 'fourtech') ) 
+        xk = fourpts(N + 2, f.domain([1, end]));
+    else
+        xk = chebpts(N + 2, f.domain([1, end]));
+    end    
 end
 
 xo = xk;
@@ -290,7 +303,11 @@ h = (w'*fk) / (w'*sigma);                          % Levelled reference error.
 pk = (fk - h*sigma);                               % Vals. of r*q in reference.
 
 % Trial polynomial.
-p = chebfun(@(x) bary(x, pk, xk, w), dom, m + 1);
+if ( isa(f.funs{1}.onefun, 'fourtech') )
+    p = chebfun(@(x) trigBary(x, pk, xk, w), dom, 2*m + 1, 'periodic');
+else
+    p = chebfun(@(x) bary(x, pk, xk, w), dom, m + 1);
+end
 
 end
 

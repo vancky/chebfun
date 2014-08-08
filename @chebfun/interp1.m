@@ -110,13 +110,12 @@ w = trigBarywts(x);
 % Define the interpolant using CHEBTECH.BARY():
 f = @(z) trigBary(z, y, x, w);
 % Construct a CHEBFUN:
-if ( rem(n,2) == 0 )
+if ( rem(n, 2) == 0 )
     n = n + 1;
 end
 p = chebfun(f, dom, n, 'periodic');
 
 end
-
 
 function p = interp1Linear(x, y, dom)
 % Linear interpolation
