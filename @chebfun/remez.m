@@ -51,6 +51,12 @@ function varargout = remez(f, varargin)
 dom = f.domain([1, end]);
 normf = norm(f);
 
+fourFlag = 0;
+if ( isa(f.funs{1}.onefun, 'fourtech') )
+    fourFlag = 1;
+end
+
+
 if ( numColumns(f) > 1 )
     error ('CHEBFUN:remez:quasi', ...
         'REMEZ does not currently support quasimatrices.');
@@ -66,7 +72,7 @@ end
 
 % With zero denominator degree, the denominator polynomial is trivial.
 if ( n == 0 )
-    if ( isa(f.funs{1}.onefun, 'fourtech') ) 
+    if ( fourFlag ) 
         q = chebfun(1, dom, 'periodic');
     else
         q = chebfun(1, dom);
@@ -94,7 +100,7 @@ while ( (delta/normf > opts.tol) && (iter < opts.maxIter) && (diffx > 0) )
     fk = feval(f, xk);     % Evaluate on the exchange set.
     
     % Barycentric weights for exchange set.
-    if ( isa(f.funs{1}.onefun, 'fourtech') )         
+    if ( fourFlag )
         w = trigBarywts(xk);
     else
         w = baryWeights(xk);   
@@ -102,7 +108,7 @@ while ( (delta/normf > opts.tol) && (iter < opts.maxIter) && (diffx > 0) )
     
     % Compute trial function and levelled reference error.
     if ( n == 0 )
-        [p, h] = computeTrialFunctionPolynomial(fk, xk, w, m, N, dom);
+        [p, h] = computeTrialFunctionPolynomial(fk, xk, w, m, N, dom, fourFlag);
     else
         [p, q, h] = computeTrialFunctionRational(fk, xk, w, m, n, N, dom);
     end
@@ -289,11 +295,9 @@ if ( flag == 0 )
     end    
 end
 
-xo = xk;
-
 end
 
-function [p, h] = computeTrialFunctionPolynomial(fk, xk, w, m, N, dom)
+function [p, h] = computeTrialFunctionPolynomial(fk, xk, w, m, N, dom, fourFlag)
 
 % Vector of alternating signs.
 sigma = ones(N + 2, 1);
@@ -303,7 +307,7 @@ h = (w'*fk) / (w'*sigma);                          % Levelled reference error.
 pk = (fk - h*sigma);                               % Vals. of r*q in reference.
 
 % Trial polynomial.
-if ( isa(f.funs{1}.onefun, 'fourtech') )
+if ( fourFlag )
     p = chebfun(@(x) trigBary(x, pk, xk, w), dom, 2*m + 1, 'periodic');
 else
     p = chebfun(@(x) bary(x, pk, xk, w), dom, m + 1);
