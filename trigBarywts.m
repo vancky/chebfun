@@ -1,14 +1,13 @@
 function w = trigBarywts(x)
 %TRIGBARYWTS   Barycentric weights for trigonometric interpolation.
-%   W = TRIGBARYWEIGHTS(X) returns scaled barycentric weights for the points 
+%   W = TRIGBARYWTS(X) returns scaled barycentric weights for the points 
 %   in the columm vector X. The weights are scaled such that norm(W, inf) == 1.
 
 % Copyright 2014 by The University of Oxford and The Chebfun Developers. 
 % See http://www.chebfun.org/ for Chebfun information.
 
-% [TODO]: Should this live in the trunk?
 
-% Check inout dimension:
+% Check input dimension:
 [n, m] = size(x);
 if ( m > 1 )
     if ( n > 1 )

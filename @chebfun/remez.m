@@ -274,7 +274,7 @@ function xk = getInitialReference(f, m, n, N)
 % If doing rational Remez, get initial reference from trial function generated
 % by CF or Chebyshev-Pade.
 flag = 0;
-if ( n >= 0 )
+if ( n > 0 )
     if ( numel(f.funs) == 1 )
         %[p, q] = chebpade(f, m, n);
         [p, q] = cf(f, m, n);
