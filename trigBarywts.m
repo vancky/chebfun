@@ -28,6 +28,7 @@ if ( isreal(x) )
 else
     C = 1; % Scaling by capacity doesn't apply for complex nodes.
 end
+C = 1;
 
 % Compute the weights:
 if ( (n < 2001) )              % For small n using matrices is faster.
