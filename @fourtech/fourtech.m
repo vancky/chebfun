@@ -244,7 +244,7 @@ classdef fourtech < smoothfun
 
         % Derivative of a FOURTECH.
         f = diff(f, k, dim)
-
+        
         % Extract information for DISPLAY.
         info = dispData(f)
         
@@ -411,6 +411,9 @@ classdef fourtech < smoothfun
         % Barycentric weights for n equispaced pionts:
         w = barywts(n)
 
+        % Differentiation matrix in Fourier basis.
+        D = diffmat(n, p)
+        
         % Compute Fourier points (x) and optionally quadrature (w)
         % and barycentric (v) weights:
         [x, w, v] = fourpts(n);
