@@ -59,10 +59,15 @@ end
 if ( size(x, 1) == 1 )
     x = x.';
 end
-x = sort(x);
+
+[x, idx] = sort(x);
+
 if ( isa(y, 'chebfun') )
     y = feval(y, x);
+else
+    y = y(idx);
 end
+
 if ( size(y, 1) == 1 )
     y = y.';
 end
@@ -105,13 +110,12 @@ end
 function p = interp1Trig(x, y, dom)
 % Trigonometric interpolation
 n = length(x);
-% Define the interpolant using Trigonometric barycentric formula:
-f = @(xx) trigBary(xx, y, x, dom);
+% Evaluate the interpolant on n equally spaced points using 
+% the trigonometric barycentric formula:
+xx = fourpts(n, dom);
+fx = trigBary(xx, y, x, dom);
 % Construct a CHEBFUN:
-if ( rem(n, 2) == 0 )
-    n = n + 1;
-end
-p = chebfun(f, dom, n, 'periodic');
+p = chebfun(fx, dom, 'periodic');
 end
 
 function p = interp1Linear(x, y, dom)
