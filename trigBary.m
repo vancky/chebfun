@@ -43,10 +43,8 @@ end
 
 % Default to equispaced nodes in [-pi, pi) and barycentric weights:
 if ( nargin < 3 )
-    % This is more efficient than calling fourtech.fourpts.
-    xk = linspace(-pi, pi, n+1);
-    % Discard the point x = pi;
-    xk = xk(1:end-1);
+    % Default points:
+    xk = fourpts(n, [-pi, pi]);
     % Default weights:
     vk = fourtech.barywts(n);
 else
@@ -83,8 +81,13 @@ end
 % Choose the appropriate function based on the length of the values to be
 % interpolated:
 if ( rem(n, 2) == 0 )
-    s = cot(sum(xk)/2);
-    ctsc = @(x) cot(x) + s;
+    s = sum(xk);
+    if ( abs(mod(s, pi)) < 4*pi*eps )
+        c = 0;
+    else        
+        c = cot(s/2);
+    end    
+    ctsc = @(x) cot(x) + c;
 else
     ctsc = @(x) csc(x);
 end
