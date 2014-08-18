@@ -105,16 +105,13 @@ end
 function p = interp1Trig(x, y, dom)
 % Trigonometric interpolation
 n = length(x);
-% Compute barycentric weights for these points:
-w = trigBarywts(x);
-% Define the interpolant using CHEBTECH.BARY():
-f = @(z) trigBary(z, y, x, w);
+% Define the interpolant using Trigonometric barycentric formula:
+f = @(xx) trigBary(xx, y, x, dom);
 % Construct a CHEBFUN:
 if ( rem(n, 2) == 0 )
     n = n + 1;
 end
 p = chebfun(f, dom, n, 'periodic');
-
 end
 
 function p = interp1Linear(x, y, dom)

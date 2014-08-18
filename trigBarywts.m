@@ -19,20 +19,9 @@ if ( m > 1 )
     end
 end
 
-% [TODO]: How do we find the capacity for trig case?
-% Capacity: 
-if ( isreal(x) )
-    % Capacity of interval.
-    A = sin(1/2*bsxfun(@minus, x, x.'));
-    C = 4/(max(A(:))-min(A(:)));
-else
-    C = 1; % Scaling by capacity doesn't apply for complex nodes.
-end
-C = 1;
-
 % Compute the weights:
 if ( (n < 2001) )              % For small n using matrices is faster.
-   V = C*A;
+   V = sin(1/2*bsxfun(@minus, x, x.'));
    V(1:n+1:end) = 1;
    VV = exp(sum(log(abs(V))));
    w = 1./(prod(sign(V)).*VV).';

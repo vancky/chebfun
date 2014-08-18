@@ -1,12 +1,12 @@
-function fx = trigBary(x, fvals, xk, vk)
+function fx = trigBary(x, fvals, xk, dom)
 %TRIGBARY   Trigonometric barycentric interpolation formula.
-%   TRIGBARY(X, FVALS, XK, VK) uses the 2nd form barycentric formula with 
-%   weights VK to evaluate an interpolant of the data {XK, FVALS(:,k)} at 
-%   the points X. Note that XK and VK should be column vectors, and FVALS, 
-%   XK, and VK should have the same length.
+%   TRIGBARY(X, FVALS, XK, dom) uses the 2nd form barycentric formula 
+%   to evaluate an interpolant of the data {XK, FVALS(:,k)}
+%   at the points X. The interpolant is supposed to live on the domain 
+%   specified in dom. Note that XK should be column vector, and 
+%   FVALS should have the same length.
 %
-%   TRIGBARY(X, FVALS) assumes XK are equally spaced points in [-pi, pi) 
-%   and VK are the corresponding barycentric weights.
+%   TRIGBARY(X, FVALS) assumes XK are equally spaced points in [-pi, pi).
 %
 %   If size(FVALS, 2) > 1 then TRIGBARY(X, FVALS) returns values in the form
 %   [F_1(X), F_2(X), ...], where size(F_k(X)) = size(X) for each k.
@@ -27,14 +27,35 @@ if ( (m > 1) && (ndimsx > 2) )
          'inputs with more than two dimensions.']);
 end
 
-% Default to equispaced nodes and barycentric weights:
+% If a domain is provided:
+if ( nargin == 4 )
+    % Map the points to [-pi, pi]
+    a = dom(1);
+    b = dom(2);
+    xk = pi/(b-a)*(2*xk-a-b);
+    x  = pi/(b-a)*(2*x-a-b);
+    % Compute the weights
+end
+
+if ( any((xk > pi) | (xk < -pi)) )
+     error('CHEBFUN:trigbary:invalidNodes', 'nodes XK must lie within the domain');
+end
+
+% Default to equispaced nodes in [-pi, pi) and barycentric weights:
 if ( nargin < 3 )
+    % This is more efficient than calling fourtech.fourpts.
     xk = linspace(-pi, pi, n+1);
-    xk = xk(1:end-1); % discard the point x = pi;
+    % Discard the point x = pi;
+    xk = xk(1:end-1);
+    % Default weights:
+    vk = fourtech.barywts(n);
+else
+    % Compute the weights:
+    vk = trigBarywts(xk);
 end
 
 if ( nargin < 4 )
-    vk = fourtech.barywts(n);
+    
 end
 
 if ( ~all(sizex) )
