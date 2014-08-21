@@ -166,13 +166,16 @@ if ( m == M - 1 )
     return
 end
 
-%c = a((M-m):-1:1);
 c = a(m+2:M+1);
 if ( length(c) > 1024 )
+    % If c is a large vector, use eigs.
+    % Define different options to be used by eigs:
     opts.disp = 0;
     opts.issym = 1;
     opts.isreal = 1;
+    % Starting vector:
     opts.v0 = ones(length(c), 1)/length(c);
+    % Largest magnitude eigenvalue:
     [V, D] = eigs(hankel(c), 1, 'lm', opts);
 else
     [V, D] = eig(hankel(c));
@@ -419,7 +422,7 @@ else
     % Extract one half of the coefficients including the zeroth:
     a = get(f, 'coeffs');
     a = a(N+1:end);
-    % Only retain the first M of these:
+    % Only retain the first M modes of these:
     a = a(1:M+1);    
 end
 
