@@ -100,11 +100,7 @@ while ( (delta/normf > opts.tol) && (iter < opts.maxIter) && (diffx > 0) )
     fk = feval(f, xk);     % Evaluate on the exchange set.
     
     % Barycentric weights for exchange set.
-    if ( fourFlag )
-        w = trigBarywts(xk);
-    else
-        w = baryWeights(xk);   
-    end
+    w = baryWeights(xk);   
     
     % Compute trial function and levelled reference error.
     if ( n == 0 )
@@ -308,7 +304,7 @@ pk = (fk - h*sigma);                               % Vals. of r*q in reference.
 
 % Trial polynomial.
 if ( fourFlag )
-    p = chebfun(@(x) trigBary(x, pk, xk, w), dom, 2*m + 1, 'periodic');
+    p = chebfun(@(x) trigBary(x, pk, xk, dom), dom, 2*m + 1, 'periodic');
 else
     p = chebfun(@(x) bary(x, pk, xk, w), dom, m + 1);
 end
