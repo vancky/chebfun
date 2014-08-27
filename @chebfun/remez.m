@@ -51,11 +51,6 @@ function varargout = remez(f, varargin)
 dom = f.domain([1, end]);
 normf = norm(f);
 
-fourFlag = 0;
-if ( isa(f.funs{1}.onefun, 'fourtech') )
-    fourFlag = 1;
-end
-
 if ( ~isreal(f) )
     error ('CHEBFUN:remez:real', ...
         'REMEZ only supports real valued functions.');
@@ -76,7 +71,7 @@ end
 
 % With zero denominator degree, the denominator polynomial is trivial.
 if ( n == 0 )
-    if ( fourFlag ) 
+    if ( isa(f.funs{1}.onefun, 'fourtech') )
         q = chebfun(1, dom, 'periodic');
     else
         q = chebfun(1, dom);
@@ -102,13 +97,22 @@ end
 % Run the main algorithm.
 while ( (delta/normf > opts.tol) && (iter < opts.maxIter) && (diffx > 0) )
     fk = feval(f, xk);     % Evaluate on the exchange set.
-    
-    % Barycentric weights for exchange set.
-    w = baryWeights(xk);   
+   
+    if ( isa(f.funs{1}.onefun, 'fourtech') )
+        w = trigBarywts(xk);
+    else
+        % Barycentric weights for exchange set.
+        w = baryWeights(xk);   
+    end
     
     % Compute trial function and levelled reference error.
     if ( n == 0 )
-        [p, h] = computeTrialFunctionPolynomial(fk, xk, w, m, N, dom, fourFlag);
+        if( isa(f.funs{1}.onefun, 'fourtech') )
+            trigFlag = 1;
+        else
+            trigFlag = 0;
+        end
+        [p, h] = computeTrialFunctionPolynomial(fk, xk, w, m, N, dom, trigFlag);
     else
         [p, q, h] = computeTrialFunctionRational(fk, xk, w, m, n, N, dom);
     end
@@ -201,11 +205,18 @@ else                   % Odd number of inputs --> rational case.
     varargin = varargin(3:end);
 end
 
-N = m + n;
+if ( isa(f.funs{1}.onefun, 'fourtech') )
+    % Use Remez for periodic functions:
+    N = 2*m;
+    % No support for rational trigonometric yet.
+    n = 0;
+else
+    N = m + n;
+end
 
 % Parse name-value option pairs.
 opts.tol = 1e-16*(N^2 + 10); % Relative tolerance for deciding convergence.
-opts.maxIter = 20;           % Maximum number of allowable iterations.
+opts.maxIter = 40;           % Maximum number of allowable iterations.
 opts.displayIter = false;    % Print output after each iteration.
 opts.plotIter = false;       % Plot approximation at each iteration.
 
@@ -297,7 +308,7 @@ end
 
 end
 
-function [p, h] = computeTrialFunctionPolynomial(fk, xk, w, m, N, dom, fourFlag)
+function [p, h] = computeTrialFunctionPolynomial(fk, xk, w, m, N, dom, trigFlag)
 
 % Vector of alternating signs.
 sigma = ones(N + 2, 1);
@@ -307,7 +318,7 @@ h = (w'*fk) / (w'*sigma);                          % Levelled reference error.
 pk = (fk - h*sigma);                               % Vals. of r*q in reference.
 
 % Trial polynomial.
-if ( fourFlag )
+if ( trigFlag )
     p = chebfun(@(x) trigBary(x, pk, xk, dom), dom, 2*m + 1, 'periodic');
 else
     p = chebfun(@(x) bary(x, pk, xk, w), dom, m + 1);

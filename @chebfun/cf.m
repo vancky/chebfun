@@ -59,6 +59,9 @@ end
 % Use full series expansion of F by default.
 if ( nargin < 4 )
     M = length(f) - 1;
+    if ( isa(f.funs{1}.onefun, 'fourtech') )
+        M = (length(f) - 1)/2;
+    end
 end
 
 numCols = numColumns(f);
@@ -138,8 +141,6 @@ end
 % Compute the CF approximation.
 if ( isempty(n) || (n == 0) )
     if ( isa(f.funs{1}.onefun, 'fourtech') )
-        M = ceil(M/2); 
-        m = floor(m/2);
         [p, q, r, s] = trigpolyCF(f, m, M);
     else
         [p, q, r, s] = polynomialCF(f, a, m, M);
@@ -399,7 +400,8 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Trigonometric Polynomial CF approximation.
 function [p, q, r, s] = trigpolyCF(f, n, M)
-% TRIGPOLYCF   CF approximation for real, periodic chebfuns based on fourtech.
+% TRIGPOLYCF   CF approximation for real, periodic chebfuns based on a fourtech
+% and suing 2M+1 coefficients of f.
 % P is the trigonometirc polynomial of length 2*n+1.
 % S is the absolute value of the eigenvalue used for the approximation.
 
@@ -439,17 +441,17 @@ s2 = [];
 
 % Solve the eigenvalue problem twice:
 if ( norm(ck, inf) > eps )
-    [b1, s1] = getLaurentCoeffs(real(a(n+2:M+1)), M, n);
+    [b1, s1] = getLaurentCoeffs(ck, M, n);
 end
 
 if ( norm(dk, inf) > eps )
-    [b2, s2] = getLaurentCoeffs(imag(a(n+2:M+1)), M, n);
+    [b2, s2] = getLaurentCoeffs(dk, M, n);
 end
 s = norm([s1, s2], 1);
 
 %% Construct the CF approximation:
 a = [conj(a(n+1:-1:2)); a(1:n+1)] - b1 - flipud(b1) - 1i*b2 + 1i*flipud(b2);
-p = real(chebfun(a, dom, 'coeffs', 'periodic'));
+p = real(chebfun(flipud(a), dom, 'coeffs', 'periodic'));
 q = chebfun(1, dom, 'periodic');
 r = @(x) p(x);
 end

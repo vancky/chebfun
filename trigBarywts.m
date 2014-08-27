@@ -19,6 +19,15 @@ if ( m > 1 )
     end
 end
 
+% Detect equispaced points:
+if ( all(abs(diff(x, 2)) < max(abs(x))*eps) )
+    w = ones(size(x));
+    w(2:2:end) = -1;
+    return
+end
+    
+    
+
 % Compute the weights:
 if ( (n < 2001) )              % For small n using matrices is faster.
    V = sin(1/2*bsxfun(@minus, x, x.'));
