@@ -72,6 +72,14 @@ if ( size(y, 1) == 1 )
     y = y.';
 end
 
+% Sort x and also y if y is not a chebfun:
+[x, idx] = sort(x);
+if ( isa(y, 'chebfun') )
+    y = feval(y, x);
+else
+    y = y(idx,:);
+end
+
 % Set default domain if none was supplied.
 if ( isempty(dom) )
     dom = [x(1) x(end)];
