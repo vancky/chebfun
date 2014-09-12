@@ -1,4 +1,4 @@
-n = 10;
+n = 3;
 Fp = .4;
 Fs = .6;
 Fc = (Fp + Fs)/2;
@@ -35,19 +35,21 @@ plot(T/2*[-Fp, -Fp, NaN, Fp, Fp], [1-d, 1+d, NaN, 1-d, 1+d], '--g' )
 plot(T/2*[-1, -Fs, NaN, Fs, 1], d*[1, 1, NaN, 1, 1], '--r')
 plot(T/2*[-1, -Fs, NaN, Fs, 1], -d*[1, 1, NaN, 1, 1], '--r')
 plot(T/2*[-Fs, -Fs, NaN, Fs, Fs], [-d, d, NaN, -d, d], '--r' )
-
+hold off
 %Compare with CF
 subplot(2, 1, 2)
 % Random points in the pass band:
 ff = sort(T/2*(-Fp + 2*Fp*rand(1000,1)));
 plot(ff, p(ff)-H(ff))
-hold on
+%hold on
 % append random points in the stop band:
 ff = sort(T/2*(Fs + (1-Fs)*rand(500,1))); 
 plot(ff, p(ff)-H(ff));
 ff = sort(T/2*(-1 + (1-Fs)*rand(500,1)));
 plot(ff, p(ff)-H(ff));
+plot(p - H)
 hold off
+[p.coeffs , H.coeffs]
 %%
 % MATLAB style
 % [H, W] = freqz(h, 1, 1000);

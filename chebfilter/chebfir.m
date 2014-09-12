@@ -126,15 +126,19 @@ if ( n < 1 || n ~= round(n) || ~isreal(n) )
             'n must be a positive integer.')
 end
 
-if ( min(size(freqs)) > 1 || any(diff(freqs) <= 0) || any((freqs < 0) | (freqs >  pi)) )
+if ( min(size(freqs)) > 1 || any(diff(freqs) <= 0) || any((freqs < 0) | (freqs >  1)) )
     error('CHEBFUN:CHEBFUN:chebfir:badInput', ...
-            'Frequencies must be an ascending vector with elements in [0, pi]')
+            'Frequencies must be an ascending vector with elements in [0, 1]')
 end
 
 if ( isa(f, 'chebfun') )
+    if ( all(f.domain == [-1, 1] ) )
+        % Only retain the part on [0, 1]
+        f = chebfun(@(x) f(x), [0, 1], 'splittgin', 'on');
+    end
     if ( any(f.domain ~= [0, 1]) )
         error('CHEBFUN:CHEBFUN:chebfir:badInput', ...
-            'Domain of desired response should be [-pi, pi].')
+            'Domain of desired response should be [0, 1].')
     end
 elseif ( isa(f, 'function_handle') )
     f = chebfun(f, [0, 1], 'splitting', 'on');
