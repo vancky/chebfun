@@ -259,7 +259,7 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Functions implementing the core part of the algorithm.
 
-function xk = getInitialReference(f, m, n, N)
+function xk = getInitialReference(f, m, n, N, dom)
 
 % If doing rational Remez, get initial reference from trial function generated
 % by CF or Chebyshev-Pade.
@@ -272,7 +272,7 @@ if ( n > 0 )
         %[p, q] = chebpade(f, m, n, 5*N);
         [p, q] = cf(f, m, n, 5*N);
     end
-    [xk, err, e, flag] = exchange([], 0, 2, f, p, q, N + 2);
+    [xk, err, e, flag] = exchange([], 0, 2, f, p, q, N + 2, dom);
 end
 
 % In the polynomial case or if the above procedure failed to produce a reference
@@ -281,6 +281,17 @@ if ( flag == 0 )
     xk = chebpts(N + 2, f.domain([1, end]));
 end
 
+if ( length(dom) == 4 )
+    L = dom(2)-dom(1) + dom(4)-dom(3);
+    np = ceil((N+2)*(dom(2)-dom(1))/L);
+    ns = floor((N+2)*(dom(4)-dom(3))/L);
+    xk1 = chebpts( np, dom(1:2));
+    xk2 = chebpts( ns, dom(3:4));
+    xk = [xk1; xk2];
+    if ( length(xk) ~= N + 2 )
+        error( 'length is not N+2' )
+    end
+end
 xo = xk;
 
 end
@@ -334,7 +345,7 @@ q = chebfun(@(x) bary(x, qk, xk, w), dom, n + 1);
 
 end
 
-function [xk, norme, err_handle, flag] = exchange(xk, h, method, f, p, q, Npts)
+function [xk, norme, err_handle, flag] = exchange(xk, h, method, f, p, q, Npts, dom)
 %EXCHANGE   Modify an equioscillation reference using the Remez algorithm.
 %   EXCHANGE(XK, H, METHOD, F, P, Q) performs one step of the Remez algorithm
 %   for the best rational approximation of the CHEBFUN F of the target function
@@ -359,6 +370,11 @@ function [xk, norme, err_handle, flag] = exchange(xk, h, method, f, p, q, Npts)
 e_num = (q.^2).*diff(f) - q.*diff(p) + p.*diff(q);
 rts = roots(e_num, 'nobreaks');
 rr = [f.domain(1) ; rts; f.domain(end)];
+if ( length(dom) ==  4 )
+    idx = (rr > dom(2)) & (rr < dom(3));
+    rr(idx) = [];
+    rr = sort( [rr; dom(2); dom(3)] );
+end
 
 % Function handle output for evaluating the error.
 err_handle = @(x) feval(f, x) - feval(p, x)./feval(q, x);
