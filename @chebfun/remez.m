@@ -83,7 +83,7 @@ deltamin = inf; % Minimum error encountered.
 diffx = 1;      % Maximum correction to trial reference.
 
 % Compute an initial reference set to start the algorithm.
-xk = getInitialReference(f, m, n, N);
+xk = getInitialReference(f, m, n, N, opts.domain);
 xo = xk;
 
 % Print header for text output display if requested.
@@ -109,11 +109,11 @@ while ( (delta/normf > opts.tol) && (iter < opts.maxIter) && (diffx > 0) )
     end
 
     % Update the exchange set using the Remez algorithm with full exchange.
-    [xk, err, err_handle] = exchange(xk, h, 2, f, p, q, N + 2);
+    [xk, err, err_handle] = exchange(xk, h, 2, f, p, q, N + 2, opts.domain);
 
     % If overshoot, recompute with one-point exchange.
     if ( err/normf > 1e5 )
-        [xk, err, err_handle] = exchange(xo, h, 1, f, p, q, N + 2);
+        [xk, err, err_handle] = exchange(xo, h, 1, f, p, q, N + 2, opts.domain);
     end
 
     % Update max. correction to trial reference and stopping criterion.
@@ -198,6 +198,7 @@ opts.tol = 1e-16*(N^2 + 10); % Relative tolerance for deciding convergence.
 opts.maxIter = 20;           % Maximum number of allowable iterations.
 opts.displayIter = false;    % Print output after each iteration.
 opts.plotIter = false;       % Plot approximation at each iteration.
+opts.domain = f.domain([1,end]);
 
 for k = 1:2:length(varargin)
     if ( strcmpi('tol', varargin{k}) )
@@ -208,6 +209,8 @@ for k = 1:2:length(varargin)
         opts.displayIter = true;
     elseif ( strcmpi('plotfcns', varargin{k}) )
         opts.plotIter = true;
+    elseif ( strcmpi('domain', varargin{k}) )
+        opts.domain = varargin{k+1};
     else
         error('CHEBFUN:CHEBFUN:remez:badInput', ...
             'Unrecognized sequence of input parameters.')
@@ -371,8 +374,8 @@ e_num = (q.^2).*diff(f) - q.*diff(p) + p.*diff(q);
 rts = roots(e_num, 'nobreaks');
 rr = [f.domain(1) ; rts; f.domain(end)];
 if ( length(dom) ==  4 )
-    idx = (rr > dom(2)) & (rr < dom(3));
-    rr(idx) = [];
+    %idx = (rr > dom(2)) & (rr < dom(3))
+    %rr(idx) = [];
     rr = sort( [rr; dom(2); dom(3)] );
 end
 
