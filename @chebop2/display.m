@@ -1,4 +1,4 @@
-function display(N)
+function display( N )
 %DISPLAY   Print to command line for CHEBOP2.
 % DISPLAY is called automatically when a statement that results in a
 % CHEBOP2 output is not terminated with a semicolon.
