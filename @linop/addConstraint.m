@@ -9,7 +9,7 @@ function L = addConstraint(L, varargin)
 %   Example:
 %     [Z, I, D, C] = linop.primitiveOperators([-1 1]);
 %     [z, E, s] = linop.primitiveFunctionals([-1 1]);
-%     A = [ D^2+I, D;  Z, D^2-I ];    % 2-by-2 chebmatrix
+%     A = linop([ D^2+I, D;  Z, D^2-I ]);   % 2-by-2 chebmatrix
 %     op1 = [ E(-1), z ];   
 %     A = addConstraint(A, op1, 1);   % impose u{1}(-1) + 0*u{2} = 1
 %     op2 = [ E(1), -E(1) ]; 
