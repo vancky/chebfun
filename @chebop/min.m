@@ -22,7 +22,7 @@ try
     A = linop(A);
     L = linop(L);
 catch ME
-    if ( ME.identifier == 'CHEBFUN:CHEBOP:min:nonlinear' )
+    if ( strcmpi(ME.identifier, 'CHEBFUN:CHEBOP:min:nonlinear') )
         error('CHEBFUN:CHEBOP:min:nonlinear', ...
             'Nonlinear minimization is not supported.')
     else
