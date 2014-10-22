@@ -69,6 +69,9 @@ if ( length(L.constraint) > 0 )
 end
 
 %%
+% TODO: What to do about the RHS that might be specified in A or L?
+
+%%
 % Now get to work.
 
 dom = A.domain;     % Domain of the problem
