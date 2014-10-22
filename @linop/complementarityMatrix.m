@@ -1,18 +1,24 @@
-function B = ctranspose(A)
-%CTRANSPOSE   Adjoint of a linear differential operator.
+function MM = complementarityMatrix(L, N)
+%COMPLEMENTARITYMATRIX   Complementarity matrix for a linear operator.
+%   COMPLEMENTARITYMATRIX(L,N) returns the 2N-by-2N matrix of
+%   complementarity between a differential operator L and its adjoint.
 
 % Copyright 2014 by The University of Oxford and The Chebfun Developers.
 % See http://www.chebfun.org/ for Chebfun information.
 
 % Test if the linop's size is any bigger than 1x1. If so, throw an error.
 % We don't yet know exactly what to do for larger systems.
-if ( max(size(A)) > 1 )
-    error('CHEBFUN:LINOP:ctranspose:size', ...
-        'TRANSPOSE defined only for 1x1 linops.');
+if ( max(size(L)) > 1 )
+    error('CHEBFUN:LINOP:complementarityMatrix:size', ...
+        'COMPLEMENTARITYMATRIX defined only for 1x1 linops.');
 end
 
-dom = A.domain;     % The domain.
-op = A.blocks{1};   % The operator block of interest.
+dom = L.domain;     % The domain.
+op = L.blocks{1};   % The operator block of interest.
+m = op.diffOrder;   % Differential order of the operator
+if ( nargin < 2 )
+    N = m;
+end
 
 % If the linop has any integration (CUMSUM) operators in it, then TOCOEFF
 % gives an error. We catch that error and throw a more helpful one.
@@ -21,7 +27,7 @@ try
 catch ME
     if ( ME.identifier == 'CHEBFUN:BLOCKCOEFF:cumsum:notSupported' )
         % If the error was the CUMSUM error, then throw a more helpful one.
-        error('CHEBFUN:LINOP:ctranspose:notSupported', ...
+        error('CHEBFUN:LINOP:transpose:notSupported', ...
             'Adjoints of integration operators are not supported.');
     else
         % Otherwise, rethrow the original.
@@ -29,27 +35,10 @@ catch ME
     end
 end
 
-[Z, I, D, C, M] = linop.primitiveOperators(dom);
-m = op.diffOrder;       % Differential order of the operator
-ad = Z;                 % Now create the formal adjoint
-for k = 0:m             % Sum up terms
-    ad = ad + (-1)^k * D^k * M(coeffs{m-k+1});
-end
-
-%%
-% TODO: Need to extract the boundary coefficients before this works!
-% TODO: Will we need to check to see if the BCs are homogeneous?
-error('CHEBFUN:LINOP:ctranpose:notSupported', ...
-    'Adjoints are not yet supported.')
-U = BOUNDARY_COEFFICIENTS;
-
-nu = rank(U);           % Number of conditions on u (op)
-nw = 2*m - nu;          % Number of conditions on w (adjoint)
-
 %%
 % Extract the coefficients from the operator and evaluate them and their first
-% k-1 derivatives at each of the endpoints. We will need these values later
-% for the construction of the complementarity matrix.
+% k-1 derivatives at each of the endpoints. We will need these values for the
+% construction of the complementarity matrix.
 zeta = [];
 xi   = [];
 for k = 1:m
@@ -63,15 +52,15 @@ end
 
 %%
 % Next, build the complementarity matrix. The mathematics comes from
-% integration by parts. See the 1960 paper by Greub and Rheinboldt for
-% details.
+% integration by parts. See either Hrothgar's thesis-to-be or the the 1960
+% paper by Greub and Rheinboldt for details.
 
 % TODO: Vectorize this if possible.
-MM = zeros(2*m);  % Complementarity matrix (to-be)
-Z = zeros(m);
-for k = 1:m
-    A = zeros(m);
-    B = zeros(m);
+MM = zeros(2*N);    % Complementarity matrix, 2N-by-2N
+Z = zeros(N);       % Zeros matrix, N-by-N
+for k = 1:m         % Compute entries up to the diffOrder
+    A = zeros(N);   % But the submatrices might be larger than m
+    B = zeros(N);
     for i = 0:k-1
         for j = 0:k-i-1
             if k-i-1 == 0,
@@ -86,14 +75,6 @@ for k = 1:m
     end
     MM = MM + [A, Z; Z, B];
 end
-
-%%
-% Now the matrix W specifying the subspace that the adjoint BCs occupy
-% comes from the product of a basis of NULL(U) and the complementarity
-% matrix.
-Q = null(U);
-W = Q' * MM;
-W = orth(W')';
 
 
 end

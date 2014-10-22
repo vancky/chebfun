@@ -8,7 +8,7 @@ function B = transpose(A)
 % We don't yet know exactly what to do for larger systems.
 if ( max(size(A)) > 1 )
     error('CHEBFUN:LINOP:transpose:size', ...
-        'TRANSPOSE only defined for 1x1 linops.');
+        'TRANSPOSE defined only for 1x1 linops.');
 end
 
 dom = A.domain;     % The domain.
