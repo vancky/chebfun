@@ -16,8 +16,8 @@ dom = F.domain;
 a   = dom(1);
 b   = dom(end);
 
-aa = [];
-bb = [];
+aa = [];    % Boundary values of F at `a`
+bb = [];    % Boundary values of F at `b`
 aa(1) = feval(F, a);
 bb(1) = feval(F, b);
 

@@ -1,13 +1,13 @@
 function MM = complementarityMatrix(L, N)
 %COMPLEMENTARITYMATRIX   Complementarity matrix for a linear operator.
 %   COMPLEMENTARITYMATRIX(L,N) returns the 2N-by-2N matrix of
-%   complementarity between a differential operator L and its adjoint.
+%   complementarity between the boundary conditions of a differential
+%   operator L and its adjoint.
 
 % Copyright 2014 by The University of Oxford and The Chebfun Developers.
 % See http://www.chebfun.org/ for Chebfun information.
 
 % Test if the linop's size is any bigger than 1x1. If so, throw an error.
-% We don't yet know exactly what to do for larger systems.
 if ( max(size(L)) > 1 )
     error('CHEBFUN:LINOP:complementarityMatrix:size', ...
         'COMPLEMENTARITYMATRIX defined only for 1x1 linops.');
@@ -16,8 +16,14 @@ end
 dom = L.domain;     % The domain.
 op = L.blocks{1};   % The operator block of interest.
 m = op.diffOrder;   % Differential order of the operator
+
 if ( nargin < 2 )
+    % Default to diffOrder size.
     N = m;
+elseif ( N < m )
+    % The size of the matrix must be at least m.
+    error('CHEBFUN:LINOP:complementarityMatrix:dimension', ...
+        'Size of complementarity matrix must be at least as large as diffOrder.')
 end
 
 % If the linop has any integration (CUMSUM) operators in it, then TOCOEFF
@@ -27,8 +33,8 @@ try
 catch ME
     if ( ME.identifier == 'CHEBFUN:BLOCKCOEFF:cumsum:notSupported' )
         % If the error was the CUMSUM error, then throw a more helpful one.
-        error('CHEBFUN:LINOP:transpose:notSupported', ...
-            'Adjoints of integration operators are not supported.');
+        error('CHEBFUN:LINOP:complementarityMatrix:notSupported', ...
+            'Complementarity of integration operators is not supported.');
     else
         % Otherwise, rethrow the original.
         rethrow(ME);
