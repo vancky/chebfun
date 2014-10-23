@@ -1,5 +1,5 @@
 function BV = boundaryValues(F, N)
-%BOUNDARYVALUES   Boundary values of a chefun.
+%BOUNDARYVALUES   Boundary values of a chebfun.
 %   BOUNDARYVALUES(F,N) computes the boundary values of a chebfun F and its
 %   first N-1 derivatives, returning the result in a vector of the form
 %       b = [F(a), F'(a), F''(a), ..., F(b), F'(b), F''(b), ...].'
