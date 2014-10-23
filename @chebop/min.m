@@ -107,7 +107,7 @@ KKT = [ (A+A.')/2, L.'; L, Z ];
 
 %% BOUNDARY CONDITIONS FOR THE FUNCTIONAL CONSTRAINTS.
 n = L.diffOrder;        % The maximum diffOrder of the problem
-nbc = length(B);        % Number of functional constraints.
+nbc = prod(size(B));    % Number of functional constraints.
 BCC = zeros(2*n, nbc);  % Matrix encoding coeffs of scalar Lagrange multipliers.
 aug_funs   = [];
 aug_fzero  = [];
@@ -124,14 +124,14 @@ for k = 1:nbc
     funcSansDeltas = removeDeltas(func);
     aug_funs  = [aug_funs, funcSansDeltas];
     aug_fzero = [aug_fzero, 0*x];
-    aug_duals = [aug_duals; r(func)]; % TODO: Must convert deltas to e() ops...
+    aug_duals = [aug_duals; r(funcSansDeltas)...
+                            + convertEndpointDeltasToEvaluators(func,n)];
     aug_dzero = [aug_dzero; z];
 end
 
 % Add the functional constraints to the KKT system.
 KKT = [ [KKT, [aug_funs; aug_fzero]];
          aug_duals, aug_dzero, aug_scalar ];
-
 
 %% BOUNDARY CONDITIONS FOR THE ODE CONSTRAINT.
 % Construct vectors of operators
@@ -152,7 +152,6 @@ end
 CMA = complementarityMatrix(A, n);
 CML = complementarityMatrix(L, n);
 
-
 %% NOW LOOP THROUGH AND ADD ALL THE BOUNDARY CONDITIONS.
 KKT = linop(KKT);
 for k = 1:n
@@ -167,7 +166,28 @@ for k = 1:n
     KKT = addbc(KKT, thisBC_b, 0);
 end
 
-% keyboard
+c = chebmatrix(c(:));
 sol = KKT \ [0*x; f; c];
+
+end
+
+
+
+function result = convertEndpointDeltasToEvaluators(f, n)
+% Don't ask.
+
+dom = domain(f);
+[z, e, s, r] = linop.primitiveFunctionals(dom);
+D = operatorBlock.diff(dom);
+
+eAtDom1 = functionalBlock.feval(dom(1), dom);
+eAtDom2 = functionalBlock.feval(dom(end), dom);
+coeffs1 = getDeltaCoeffsAt(f, dom(1), n);
+coeffs2 = getDeltaCoeffsAt(f, dom(end), n);
+result = z;
+for k = 1:n
+    result = result + coeffs1(k)*eAtDom1*D^(k-1);
+    result = result + coeffs2(k)*eAtDom2*D^(k-1);
+end
 
 end

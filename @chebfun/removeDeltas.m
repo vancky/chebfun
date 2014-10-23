@@ -6,9 +6,11 @@ function F = removeDeltas(F)
 % See http://www.chebfun.org/ for Chebfun information.
 
 for k = 1:length(F.funs)
-    if ( strcmpi(class(F.funs{k}), 'deltafun') )
+    if ( isa(F.funs{k}, 'deltafun') )
         F.funs{k} = F.funs{k}.funPart;
     end
 end
+
+F.pointValues = chebfun.getValuesAtBreakpoints(F.funs);
 
 end
