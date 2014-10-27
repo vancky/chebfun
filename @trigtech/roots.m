@@ -37,6 +37,7 @@ end
 %    matlab's built-in roots routine.
 %
 % [TODO]: Figure out a more elegant way to find roots of a TRIGTECH.
+MaxDeg = 101;
 
 useMatlabsRootsCommand = false;
 pruneRoots = false;
@@ -71,7 +72,7 @@ if ( useMatlabsRootsCommand )
         % roots.
         fj = simplify(extractColumns(f,j));
         % Flip coeffs to match Matlab roots:
-        rTemp = roots(fj.coeffs(end:-1:1,:));
+        rTemp = jroots(fj.coeffs(end:-1:1,:));
         % Roots here finds the roots in the transformed variable z=exp(i*pi*x)
         % so we need to take the log (and scale it) to get back the roots in x.
         rTemp = -1i/pi*log(rTemp);
@@ -101,9 +102,45 @@ if ( useMatlabsRootsCommand )
     % Convert to an array for output:
     out = cell2mat(r);
 else
-    % An arbitrary decision was made to use CHEBTECH1.
-    g = chebtech1(@(x) f.feval(x));
-    out = roots(g,varargin{:});
+    numCols = size(f.coeffs, 2);
+    r = cell(1,numCols);
+    for j = 1:numCols
+        
+        % Simplify the current column to get the minimal number of
+        % roots.
+        fj = simplify(extractColumns(f,j));
+        
+        % call matlab's roots if degree is small enough
+        if (length(fj) <= MaxDeg)
+        
+        
+            % Flip coeffs to match Matlab roots:
+            rTemp = roots(fj.coeffs(end:-1:1,:));
+            % Roots here finds the roots in the transformed variable z=exp(i*pi*x)
+            % so we need to take the log (and scale it) to get back the roots in x.
+            rTemp = rTemp(abs(abs(rTemp)-1) <= 10*eps); 
+            rTemp = angle(rTemp)/pi;
+            r{j} = rTemp;
+            
+        % call chebtech otherwise
+        else
+            
+            % An arbitrary decision was made to use CHEBTECH1.
+            g = chebtech1(@(x) fj.feval(x));
+            r{j} = roots(g,varargin{:});
+            
+        end
+    end
+    
+    % Find the max length of r:
+    mlr = max(cellfun(@length, r)); 
+
+    % Pad the columns in r with NaNs:
+    r = cellfun(@(x) [x ; NaN(mlr - length(x), 1)], r, 'UniformOutput', false);
+
+    % Convert to an array for output:
+    out = cell2mat(r);
+    
 end
 
 end
