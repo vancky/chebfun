@@ -1,4 +1,4 @@
-function r = roots(c)
+function r = jroots(c)
 %ROOTS  Find polynomial roots.
 %   ROOTS(C) computes the roots of the polynomial whose coefficients
 %   are the elements of the vector C. If C has N+1 components,

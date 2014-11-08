@@ -28,119 +28,121 @@ if ( isempty(f) )
     return
 end
 
-% Here is the present strategy:
+out = jroots2(f);
+
+% % Here is the present strategy:
+% % 
+% % 1. The default option is to simply create a chebtech of the TRIGTECH and
+% %    call roots on it. 
+% %
+% % 2. If the option is to find 'all' or 'complex' roots then we simply use
+% %    matlab's built-in roots routine.
+% %
+% % [TODO]: Figure out a more elegant way to find roots of a TRIGTECH.
+% MaxDeg = 101;
 % 
-% 1. The default option is to simply create a chebtech of the TRIGTECH and
-%    call roots on it. 
-%
-% 2. If the option is to find 'all' or 'complex' roots then we simply use
-%    matlab's built-in roots routine.
-%
-% [TODO]: Figure out a more elegant way to find roots of a TRIGTECH.
-MaxDeg = 101;
-
-useMatlabsRootsCommand = false;
-pruneRoots = false;
-
-if ( nargin > 1 )
-    if isa(varargin{1}, 'struct')
-        rootsPref = varargin{1};
-        useMatlabsRootsCommand = rootsPref.all;
-        pruneRoots = rootsPref.prune;
-    else
-        j = 1;
-        while ( j <= length(varargin) )
-            % Determine if the 'all' or 'complex' flag was passed in.
-            if ( any(strcmp(lower(varargin{j}), 'complex')) ) %#ok<STCI>
-                useMatlabsRootsCommand = varargin{j+1};
-                pruneRoots = true;
-                break;
-            elseif ( any(strcmp(lower(varargin{j}), 'all')) ) %#ok<STCI>
-                useMatlabsRootsCommand = varargin{j+1};                
-                break;
-            end
-            j = j+2;
-        end
-    end
-end
-
-if ( useMatlabsRootsCommand )
-    numCols = size(f.coeffs, 2);
-    r = cell(1,numCols);
-    for j = 1:numCols
-        % Simplify the current column to get the minimal number of
-        % roots.
-        fj = simplify(extractColumns(f,j));
-        % Flip coeffs to match Matlab roots:
-        rTemp = jroots(fj.coeffs(end:-1:1,:));
-        % Roots here finds the roots in the transformed variable z=exp(i*pi*x)
-        % so we need to take the log (and scale it) to get back the roots in x.
-        rTemp = -1i/pi*log(rTemp);
-       
-        % Prune the roots if required.  
-        if ( pruneRoots )
-            % For trigtech pruning means only keep the roots that fit in
-            % the strip of analyticity (estimated using 10*machine eps).
-            % This is the analog to what chebtech does by pruning to the
-            % Bernstein ellipse.  The distance from the real-axis of the
-            % strip is given by a = 1i/N/pi*log(4/e + 1), where e is the
-            % defined max precision (10*eps)) and N is the highest non-zero
-            % Fourier term.
-            N = ceil(length(fj.coeffs)/2) - 1;
-            a = 1/N/pi*log(4/(10*eps) + 1);
-            rTemp = rTemp(abs(imag(rTemp)) <= a); 
-        end
-        
-        r{j} = rTemp;
-    end
-    % Find the max length of r:
-    mlr = max(cellfun(@length, r)); 
-
-    % Pad the columns in r with NaNs:
-    r = cellfun(@(x) [x ; NaN(mlr - length(x), 1)], r, 'UniformOutput', false);
-
-    % Convert to an array for output:
-    out = cell2mat(r);
-else
-    numCols = size(f.coeffs, 2);
-    r = cell(1,numCols);
-    for j = 1:numCols
-        
-        % Simplify the current column to get the minimal number of
-        % roots.
-        fj = simplify(extractColumns(f,j));
-        
-        % call matlab's roots if degree is small enough
-        if (length(fj) <= MaxDeg)
-        
-        
-            % Flip coeffs to match Matlab roots:
-            rTemp = roots(fj.coeffs(end:-1:1,:));
-            % Roots here finds the roots in the transformed variable z=exp(i*pi*x)
-            % so we need to take the log (and scale it) to get back the roots in x.
-            rTemp = rTemp(abs(abs(rTemp)-1) <= 10*eps); 
-            rTemp = angle(rTemp)/pi;
-            r{j} = rTemp;
-            
-        % call chebtech otherwise
-        else
-            
-            % An arbitrary decision was made to use CHEBTECH1.
-            g = chebtech1(@(x) fj.feval(x));
-            r{j} = roots(g,varargin{:});
-            
-        end
-    end
-    
-    % Find the max length of r:
-    mlr = max(cellfun(@length, r)); 
-
-    % Pad the columns in r with NaNs:
-    r = cellfun(@(x) [x ; NaN(mlr - length(x), 1)], r, 'UniformOutput', false);
-
-    % Convert to an array for output:
-    out = cell2mat(r);
-    
-end
+% useMatlabsRootsCommand = false;
+% pruneRoots = false;
+% 
+% if ( nargin > 1 )
+%     if isa(varargin{1}, 'struct')
+%         rootsPref = varargin{1};
+%         useMatlabsRootsCommand = rootsPref.all;
+%         pruneRoots = rootsPref.prune;
+%     else
+%         j = 1;
+%         while ( j <= length(varargin) )
+%             % Determine if the 'all' or 'complex' flag was passed in.
+%             if ( any(strcmp(lower(varargin{j}), 'complex')) ) %#ok<STCI>
+%                 useMatlabsRootsCommand = varargin{j+1};
+%                 pruneRoots = true;
+%                 break;
+%             elseif ( any(strcmp(lower(varargin{j}), 'all')) ) %#ok<STCI>
+%                 useMatlabsRootsCommand = varargin{j+1};                
+%                 break;
+%             end
+%             j = j+2;
+%         end
+%     end
+% end
+% 
+% if ( useMatlabsRootsCommand )
+%     numCols = size(f.coeffs, 2);
+%     r = cell(1,numCols);
+%     for j = 1:numCols
+%         % Simplify the current column to get the minimal number of
+%         % roots.
+%         fj = simplify(extractColumns(f,j));
+%         % Flip coeffs to match Matlab roots:
+%         rTemp = jroots(fj.coeffs(end:-1:1,:));
+%         % Roots here finds the roots in the transformed variable z=exp(i*pi*x)
+%         % so we need to take the log (and scale it) to get back the roots in x.
+%         rTemp = -1i/pi*log(rTemp);
+%        
+%         % Prune the roots if required.  
+%         if ( pruneRoots )
+%             % For trigtech pruning means only keep the roots that fit in
+%             % the strip of analyticity (estimated using 10*machine eps).
+%             % This is the analog to what chebtech does by pruning to the
+%             % Bernstein ellipse.  The distance from the real-axis of the
+%             % strip is given by a = 1i/N/pi*log(4/e + 1), where e is the
+%             % defined max precision (10*eps)) and N is the highest non-zero
+%             % Fourier term.
+%             N = ceil(length(fj.coeffs)/2) - 1;
+%             a = 1/N/pi*log(4/(10*eps) + 1);
+%             rTemp = rTemp(abs(imag(rTemp)) <= a); 
+%         end
+%         
+%         r{j} = rTemp;
+%     end
+%     % Find the max length of r:
+%     mlr = max(cellfun(@length, r)); 
+% 
+%     % Pad the columns in r with NaNs:
+%     r = cellfun(@(x) [x ; NaN(mlr - length(x), 1)], r, 'UniformOutput', false);
+% 
+%     % Convert to an array for output:
+%     out = cell2mat(r);
+% else
+%     numCols = size(f.coeffs, 2);
+%     r = cell(1,numCols);
+%     for j = 1:numCols
+%         
+%         % Simplify the current column to get the minimal number of
+%         % roots.
+%         fj = simplify(extractColumns(f,j));
+%         
+%         % call matlab's roots if degree is small enough
+%         if (length(fj) <= MaxDeg)
+%         
+%         
+%             % Flip coeffs to match Matlab roots:
+%             rTemp = roots(fj.coeffs(end:-1:1,:));
+%             % Roots here finds the roots in the transformed variable z=exp(i*pi*x)
+%             % so we need to take the log (and scale it) to get back the roots in x.
+%             rTemp = rTemp(abs(abs(rTemp)-1) <= 10*eps); 
+%             rTemp = angle(rTemp)/pi;
+%             r{j} = rTemp;
+%             
+%         % call chebtech otherwise
+%         else
+%             
+%             % An arbitrary decision was made to use CHEBTECH1.
+%             g = chebtech1(@(x) fj.feval(x));
+%             r{j} = roots(g,varargin{:});
+%             
+%         end
+%     end
+%     
+%     % Find the max length of r:
+%     mlr = max(cellfun(@length, r)); 
+% 
+%     % Pad the columns in r with NaNs:
+%     r = cellfun(@(x) [x ; NaN(mlr - length(x), 1)], r, 'UniformOutput', false);
+% 
+%     % Convert to an array for output:
+%     out = cell2mat(r);
+%     
+% end
 
 end
