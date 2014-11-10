@@ -10,7 +10,8 @@ function S = convertmat(n, K1, K2)
 % See http://www.chebfun.org/ for Chebfun information.
 
 % Create the conversion matrix.
-S = speye(n);
+% S = speye(n);
+S = eye(n); 
 for s = K1:K2
     S = ultraS.spconvert(n, s) * S;
 end

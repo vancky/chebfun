@@ -11,10 +11,12 @@ function T = spconvert(n, lam)
 
 if ( lam == 0 )
     dg = .5*ones(n - 2, 1);
-    T = spdiags([1 0 ; .5 0 ; dg -dg], [0 2], n, n);
+%     T = spdiags([1 0 ; .5 0 ; dg -dg], [0 2], n, n);
+    T = diag( [1 1/2 dg] ) + diag(-dg, 2); 
 else
     dg = lam./(lam + (2 : n - 1))';
-    T = spdiags([1 0 ; lam./(lam + 1) 0 ; dg -dg], [0 2], n, n);
+%     T = spdiags([1 0 ; lam./(lam + 1) 0 ; dg -dg], [0 2], n, n);
+    T = diag( [1 lam./(lam+1) dg] ) + diag(-dg,2); 
 end
 
 end

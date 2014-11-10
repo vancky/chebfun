@@ -14,12 +14,15 @@ end
 
 % Create the differentation matrix.
 if ( m > 0 )
-    D = spdiags((0 : n - 1)', 1, n, n);
+    %D = spdiags((0 : n - 1)', 1, n, n);
+    D = diag( 0:n-1, 1); 
     for s = 1:m-1
-        D = spdiags(2*s*ones(n, 1), 1, n, n) * D;
+        %D = spdiags(2*s*ones(n, 1), 1, n, n) * D;
+        D = diag(2*s*ones(n-1,1), 1)*D; 
     end
 else
-    D = speye(n);
+    %D = speye(n);
+    D = eye(n); 
 end
 
 end
