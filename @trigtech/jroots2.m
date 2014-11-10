@@ -6,6 +6,7 @@ root_ints = zero_ints(c);
 
 % compute roots using newton's method
 rts = newton_roots(c,root_ints);
+% rts = secant_roots(c,root_ints);
 
 % X = linspace(-1,1,401)';
 % 
@@ -22,7 +23,7 @@ end
 function root_ints = zero_ints(c)
 
 % max density increase
-minc = 10;
+minc = 100;
 
 % set maximum power of 2
 mpow = 20;
@@ -77,11 +78,48 @@ rts = sum(root_ints,2)/2;
 % df
 dc = diff(c);
 
+STPS = [];
+FS = [];
+DFS = [];
 % newton steps
 for ii=1:5
    stp = c.feval(rts)./dc.feval(rts);
-   norm(stp,inf)
+%    STPS = [STPS,stp];
+%    FS = [FS,c.feval(rts)];
+%    DFS = [DFS,dc.feval(rts)];
+   nrm = norm(stp,inf)
+   if nrm < eps
+       break;
+   end
    rts = rts - stp;    
+end
+% STPS
+% FS
+% DFS
+
+end
+
+function rts = secant_roots(c,root_ints)
+
+% initial guesses
+old_rts = sum(root_ints,2)/2;
+rts = sum([root_ints(:,1),old_rts],2)/2;
+
+% df
+dc = diff(c);
+
+% secant steps
+for ii=1:20
+   stp = c.feval(rts).*(rts-old_rts)./(c.feval(rts)-c.feval(old_rts));
+   stp(isnan(stp)) = 0;
+   stp(isinf(stp)) = 0;
+   nrm = norm(stp,inf)
+   dnrm = norm(dc.feval(rts),inf);
+   if nrm < eps*dnrm
+       break;
+   end
+   old_rts = rts;
+   rts = rts - stp;
 end
 
 end
