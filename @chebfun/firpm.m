@@ -1,6 +1,7 @@
-function varargout = firpm(n, freqs, f)
-%FIRPM   FIR filter design for real valued chebfuns.
-%
+function varargout = firpm(m, freqs, f)
+%FIRPM   FIR minimax filter design for real valued chebfuns.
+%   H = FIRPM(M, FREQS, F) is a periodic chebfun of lenght M+1 representing
+%   an order M filter.
 
 % Copyright 2014 by The University of Oxford and The Chebfun Developers.
 % See http://www.chebfun.org/ for Chebfun information.
@@ -10,6 +11,13 @@ function varargout = firpm(n, freqs, f)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Wrapper to call the pmRemez Algorithm
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% At the moment, m is always an even number:
+if ( rem(m, 2) ~= 0 )
+    error('CHEBFUN:CHEBFUN:firpm:odd', 'Input m must be even.');
+else
+    n = m/2;
+end
 % Map the problem from the circle onto [-1, 1]:
 g = chebfun(@(x) feval(f, 1/pi*acos(x)), 'splitting', 'on');
 dom = sort(cos(pi*freqs));
@@ -127,7 +135,6 @@ status.iter = iter;
 status.diffx = diffx;
 status.xk = xk;
 
-p = simplify(p);
 varargout = {p, err, status};
 
 end
@@ -176,8 +183,18 @@ xk = chebpts(N + 2, f.domain([1, end]));
 
 if ( length(dom) == 4 )
     L = dom(2)-dom(1) + dom(4)-dom(3);
-    np = ceil((N+2)*(dom(2)-dom(1))/L);
-    ns = floor((N+2)*(dom(4)-dom(3))/L);
+    n1 = (N+2)*(dom(2)-dom(1))/L;
+    n2 = (N+2)*(dom(4)-dom(3))/L;
+    np = ceil(n1);
+    ns = floor(n2);
+    if ( np + ns > N + 2 )
+        np = np - 1;
+    end        
+    
+    if ( np + ns < N + 2 )
+        ns = ns + 1;
+    end
+    
     xk1 = chebpts( np, dom(1:2));
     xk2 = chebpts( ns, dom(3:4));
     xk = [xk1; xk2];
