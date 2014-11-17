@@ -18,8 +18,16 @@ if ( rem(m, 2) ~= 0 )
 else
     n = m/2;
 end
-% Map the problem from the circle onto [-1, 1]:
-g = chebfun(@(x) feval(f, 1/pi*acos(x)), 'splitting', 'on');
+if ( isa(f, 'chebfun') || isa(f, 'function_handle') )    
+    % Map the problem from the circle onto [-1, 1]:
+    g = chebfun(@(x) feval(f, 1/pi*acos(x)), 'splitting', 'on');
+end
+
+if ( isa(f, 'double') )
+    f = chebfun.interp1(freqs, f, 'linear', [0, 1]);
+    g = chebfun(@(x) feval(f, 1/pi*acos(x)), 'splitting', 'on');
+end
+
 dom = sort(cos(pi*freqs));
 [p, err, status] = pmRemez(g, n, 'domain', dom);
 status.xk = sort(1/pi*acos(status.xk));
