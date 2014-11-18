@@ -44,9 +44,9 @@ linpref.errTol = max(eps, pref.errTol/100);
 
 % Adjust the minimal dimension to use with the length of the right-hand
 % side.
-% minDimension = max(cellfun(@(v) length(v), rhs.blocks));
-% linpref.minDimension = min(linpref.maxDimension, ...
-%     max(linpref.minDimension, minDimension));
+minDimension = max(cellfun(@(v) length(v), rhs.blocks));
+ linpref.minDimension = min(linpref.maxDimension, ...
+     max(linpref.minDimension, minDimension));
 
 % Solve the linear problem:
 del = linsolve(L, rhs, linpref);
