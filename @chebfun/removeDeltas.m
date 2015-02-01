@@ -6,9 +6,7 @@ function F = removeDeltas(F)
 % See http://www.chebfun.org/ for Chebfun information.
 
 for k = 1:length(F.funs)
-    if ( isa(F.funs{k}, 'deltafun') )
-        F.funs{k} = F.funs{k}.funPart;
-    end
+    F.funs{k} = removeDeltas(F.funs{k});
 end
 
 F.pointValues = chebfun.getValuesAtBreakpoints(F.funs);
