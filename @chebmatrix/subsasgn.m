@@ -11,9 +11,11 @@ function A = subsasgn(A, sa, B)
 switch(sa(1).type)
     
     case {'()', '{}'}
-        if isa(B, 'chebmatrix')
+        if ( isa(B, 'chebmatrix') )
             data = B.blocks;
-        else
+        elseif ( ~isempty(B) )
+            % Empty B results in removing the referenced elements:
+            % >> A(1,:) = []
             data = { B };
         end
 

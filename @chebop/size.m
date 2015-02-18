@@ -4,6 +4,8 @@ function mn = size(N)
 %   functions to the operator of the chebop A and N is the number of
 %   its output functions.
 
+% TODO: Detect parameters as scalars, if possible.
+
 % Evaluate N.op in order to determine the output size.
 zeroFun = chebfun(0, N.domain);
 u = repmat({zeroFun}, nargin(N.op), 1);

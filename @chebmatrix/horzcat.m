@@ -42,7 +42,7 @@ end
 % just a cell of blocks. 
 cs = [0 cumsum(n)];
 for j = 1:nargin
-    B(:,cs(j)+(1:n(j))) = blocks{j};
+    B(:, cs(j)+(1:n(j))) = blocks{j};
 end
 
 % This step will perform domain compatibility checking.
@@ -56,4 +56,3 @@ if ( any( any( bsxfun(@ne, row(:,1), row) ) ) )
 end
 
 end
-
