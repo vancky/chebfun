@@ -1,6 +1,6 @@
 function out = horzcat(varargin)
-%HORZCAT   Horizontal concatenation of CHEBFUN objects.
-%   [A B] horizontally concatenates the column CHEBFUN objects A and B to form
+%HORZCAT   Horizontally concatenate of CHEBFUN objects.
+%   [A, B] horizontally concatenates the column CHEBFUN objects A and B to form
 %   an array-valued CHEBFUN or an array of CHEBFUN objects (depending on whether
 %   the interior breakpoints of A and B match or not). [A,B] does the same. Any
 %   number of CHEBFUN objects can be concatenated within one pair of brackets.
@@ -27,13 +27,12 @@ else
     varargin(empties) = [];
 end
 
-% Find the locations of the CHEBFUN objects in the inputs:
 if ( numel(varargin) == 1 )
     out = varargin{1};
     return
 end
 
-% Promote doubles to CHEBFUN objects:
+% Find the locations of the CHEBFUN objects in the inputs:
 isCheb = cellfun('isclass', varargin, 'chebfun');
 chebfun1 = varargin{find(isCheb, 1, 'first')};
 

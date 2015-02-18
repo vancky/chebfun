@@ -20,4 +20,5 @@ pass(3) = norm(g{1} - 2*sin(x)) + norm(g{2} - 3*cos(x)) == 0;
 % Make sure addition of the CHEBMATRIX objects is OK.
 h = f + g;
 pass(4) = norm(h{1} - 3*sin(x)) + norm(h{2} - 4*cos(x)) == 0;
+
 end

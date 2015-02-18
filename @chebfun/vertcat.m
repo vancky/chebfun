@@ -15,8 +15,6 @@ function out = vertcat(varargin)
 %  NUM2CELL should be enough to do this, but it not yet extensively tested.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% TODO: Test.
-
 % Find the locations of the CHEBFUN objects in the inputs:
 isCheb = cellfun('isclass', varargin, 'chebfun');
 chebfun1 = varargin{find(isCheb, 1, 'first')};
@@ -25,7 +23,7 @@ chebfun1 = varargin{find(isCheb, 1, 'first')};
 if ( ~all(chebfun1(1).isTransposed == ...
         cellfun(@(f) double(f(1).isTransposed), varargin(isCheb)) ) )
     error('CHEBFUN:CHEBFUN:vertcat:transpose', ...
-        'Dimensions of matrices being concatenated are not consistent. ');
+        'Dimensions of matrices being concatenated are not consistent.');
 end
 
 numElements = cellfun(@(u) numel(u), varargin);

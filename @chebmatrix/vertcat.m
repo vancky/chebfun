@@ -1,5 +1,5 @@
 function C = vertcat(varargin)
-%VERTCAT   Horizontally concatenate chebmatrices.
+%VERTCAT   Vertically concatenate chebmatrices.
 %   Z = [A; B; C; ...] vertically combines the chebmatrices, operator blocks,
 %   chebfuns, and scalars given in the call, if their column sizes are
 %   compatible.
