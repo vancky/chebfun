@@ -62,8 +62,11 @@ if ( numColumns(f) > 1 )
 end
 
 if ( issing(f) )
-    error('CHEBFUN:CHEBFUN:remez:singularFunction', ...
-        'REMEZ does not currently support functions with singularities.');
+    exponents = get(f, 'exps');
+    if ( any(exponents(:) < 0 ) )
+        error('CHEBFUN:CHEBFUN:remez:unboundedSingularFunction', ...
+            'REMEZ does not currently support functions with unbounded singularities.');
+    end
 end
 
 % Parse the inputs.
