@@ -11,6 +11,7 @@ function A = subsasgn(A, sa, B)
 switch(sa(1).type)
     
     case {'()', '{}'}
+        data = [];
         if ( isa(B, 'chebmatrix') )
             data = B.blocks;
         elseif ( ~isempty(B) )
