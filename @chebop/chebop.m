@@ -275,30 +275,30 @@ classdef (InferiorClasses = {?double}) chebop
     methods ( Access = public, Static = true )
 
         function D = diff()
-            D = chebop(@(u) diff(u));
+            D = chebop(@(x,u) diff(u));
         end
 
         function I = eye()
-            I = chebop(@(u) u);
+            I = chebop(@(x,u) u);
         end
 
         function M = mult(varargin)
             if nargin > 0
                 % Multiplication operator for the given input.
                 f = varargin{1};
-                M = chebop(@(u) f.*u);
+                M = chebop(@(x,u) f.*u);
             else
                 % Multiplication operator generator.
-                M = @(f) chebop(@(u) f.*u);
+                M = @(f) chebop(@(x,u) f.*u);
             end
         end
 
         function K = cumsum()
-            K = chebop(@(u) cumsum(u));
+            K = chebop(@(x,u) cumsum(u));
         end
 
         function Z = zeros()
-            Z = chebop(@(u) 0*u);
+            Z = chebop(@(x,u) 0*u);
         end
 
     end
@@ -508,6 +508,35 @@ classdef (InferiorClasses = {?double}) chebop
                     out = false;
                     break
                 end
+            end
+        end
+
+        function out = plus(A,B)
+            %PLUS   CHEBOP plus.
+            if ( isa(A, 'chebop') && isa(B, 'chebop') )
+                if ( true ) % TOOO: Make sure sizes match here.
+                    nvars = numVars(A);
+                    out = chebop(@(varargin) A.op(varargin{:}) + B.op(varargin{:}));
+                else
+                    error('CHEBFUN:CHEBOP:plus:sizeMismatch', ...
+                        'Sizes of chebops must match.')    
+                end
+
+            elseif ( isa(A, 'chebfun') || isa(A, 'double') )
+                out = chebop(@(varargin) B.op(varargin{:})+A);
+
+            elseif ( isa(B, 'chebfun') || isa(B, 'double') )
+                out = chebop(@(varargin) A.op(varargin{:})+B);
+
+            else
+                if ( ~isa(A, 'chebop') )
+                    objType = class(A);
+                else
+                    objType = class(B);
+                end
+                error('CHEBFUN:CHEBOP:plus:notSupported', ...
+                    ['CHEBOP/PLUS not supported for object of type ' ...
+                    objType '.'])
             end
         end
 
