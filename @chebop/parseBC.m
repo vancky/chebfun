@@ -11,7 +11,7 @@ function result = parseBC(N, BC, type)
 % Copyright 2014 by The University of Oxford and The Chebfun Developers. 
 % See http://www.chebfun.org/ for Chebfun information.
 
-numIn = nargin(N);
+numIn = numVars(N);
 
 if ( isempty(BC) )
     result = [];
@@ -32,6 +32,7 @@ elseif ( isa(BC, 'function_handle') )
     % input function handle that takes one argument. Otherwise, we request that
     % the number of input to the BC function handle is one less than the number
     % of arguments to the OP part.
+    
     if ( (numIn == 0) || ( (numIn == 1) && (nargin(BC) == 1) ) || ...
             ( strcmp(type,'lrbc') && (nargin(BC) == (numIn - 1)) ) || ...
             ( strcmp(type,'bc') && (nargin(BC) == numIn) ) || ...
