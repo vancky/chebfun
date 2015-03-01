@@ -48,6 +48,8 @@ function varargout = firpm(n, freqs, f, varargin)
 if ( nargin < 3 )
     error('CHEBFUN:CHEBFUN:firmp:nargin', ...
         'FIRPM should have at least three input arguments.');
+end
+
 if ( isempty(f) )
     varargout = {f};
     return;
@@ -68,37 +70,55 @@ if ( issing(f) )
         'FIRPM does not support functions with singularities.');
 end
 
-dom = f.domain([1, end]);
-if ( any((abs(dom - [0, 1]) > 100*eps )) )
-    error('CHEBFUN:CHEBFUN:firmpm:Domain', ...
-        'Desired frequency response must be defined on [0, 1].');
-end
-
 if ( isdelta(f) )
     error('CHEBFUN:CHEBFUN:firmpm:deltaFunctions', ...
         'Desired frequency resoonse must not have any delta functions.');
 end
 
-% Parse the inputs.
-[m, N, opts] = parseInputs(f, varargin{:});
-
+dom = f.domain([1, end]);
 normf = norm(f);
+if ( any((abs(dom - [0, 1]) > 100*eps )) )
+    error('CHEBFUN:CHEBFUN:firmpm:Domain', ...
+        'Desired frequency response must be defined on [0, 1].');
+end
 
-% Map everything to [-pi, pi]:
-f = newDomain(f, [-pi, pi]);
 
-% normalize f:
-f = f/normf;           
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Wrapper to call the pmRemez Algorithm
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+if ( isa(f, 'double') )
+    f = chebfun.interp1(freqs, f, 'linear', [0, 1]);
+end
 
+% Map the problem from the circle onto [-1, 1]:
+g = chebfun(@(x) feval(f, 1/pi*acos(x)), 'splitting', 'on');
+
+
+bands = sort(cos(pi*freqs));
+[p, err, status] = pmRemez(g, n, bands);
+status.xk = sort(1/pi*acos(status.xk));
+a = chebcoeffs(p);
+c = [1/2*a(end:-1:2); a(1); 1/2*a(2:end);];
+H = chebfun(c, 'trig', 'coeffs');
+varargout = {H, err, status};
+end
+
+%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% PM version of the Remez Algorithm
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function varargout = pmRemez(f, n, bands)
+% Parse the inputs.
+[n, N, opts] = parseInputs(f, n);
+normf = norm(f);
 % Initial values for some parameters.
 iter = 0;       % Iteration count.
-delta = 1;      % Value for stopping criterion.
+delta = normf;  % Value for stopping criterion.
 deltamin = inf; % Minimum error encountered.
 diffx = 1;      % Maximum correction to trial reference.
 
-
-% Compute an initial reference set to start the algorithm:
-xk = trigpts(N, [-pi, pi]);
+% Compute an initial reference set to start the algorithm.
+xk = getInitialReference(f, n, bands);
 xo = xk;
 
 % Print header for text output display if requested.
@@ -107,12 +127,11 @@ if ( opts.displayIter )
 end
 
 % Run the main algorithm.
-while ( (delta > opts.tol) && (iter < opts.maxIter) && (diffx > 0) )
+while ( (delta/normf > opts.tol) && (iter < opts.maxIter) && (diffx > 0) )
     fk = feval(f, xk);     % Evaluate on the exchange set.
-    w = trigBaryWeights(xk);
-    
-    % Compute trial function and levelled reference error.
-    [p, h] = computeTrialFunctionPolynomial(fk, xk, w, m, N, [-pi, pi]);
+    w = baryWeights(xk);   % Barycentric weights for exchange set.
+
+    [p, h] = computeTrialFunctionPolynomial(fk, xk, w, n, N, bands);
     
     % Perturb exactly-zero values of the levelled error.
     if ( h == 0 )
@@ -120,11 +139,11 @@ while ( (delta > opts.tol) && (iter < opts.maxIter) && (diffx > 0) )
     end
 
     % Update the exchange set using the Remez algorithm with full exchange.
-    [xk, err, err_handle] = exchange(xk, h, 2, f, p, N);
+    [xk, err, err_handle] = exchange(xk, h, 2, f, p, N + 2, bands);
 
     % If overshoot, recompute with one-point exchange.
     if ( err/normf > 1e5 )
-        [xk, err, err_handle] = exchange(xo, h, 1, f, p, N);
+        [xk, err, err_handle] = exchange(xo, h, 1, f, p, N + 2, bands);
     end
 
     % Update max. correction to trial reference and stopping criterion.
@@ -133,7 +152,7 @@ while ( (delta > opts.tol) && (iter < opts.maxIter) && (diffx > 0) )
 
     % Store approximation with minimum norm.
     if ( delta < deltamin )
-        pmin = p;
+        pmin = p;        
         errmin = err;
         xkmin = xk;
         deltamin = delta;
@@ -155,59 +174,39 @@ end
 % Take best results of all the iterations we ran.
 p = pmin;
 err = errmin;
-
-% Map the points back on the original domain:
-forwardMap = @(y) b*(y + pi)/(2*pi) + a*(pi - y)/(2*pi); 
-xk = forwardMap(xkmin);
-
+xk = xkmin;
 delta = deltamin;
 
 % Warn the user if we failed to converge.
 if ( delta/normf > opts.tol )
-    warning('CHEBFUN:CHEBFUN:firmpm:convergence', ...
-        ['Remez algorithm did not converge after ', num2str(iter), ...
+    warning('CHEBFUN:CHEBFUN:pmRemez:convergence', ...
+        ['PM-Remez algorithm did not converge after ', num2str(iter), ...
          ' iterations to the tolerance ', num2str(opts.tol), '.']);
 end
 
 % Form the outputs.
-status.delta = delta;
+status.delta = delta/normf;
 status.iter = iter;
 status.diffx = diffx;
 status.xk = xk;
 
-% Map the approximation back to the original domain:
-p = newDomain(p, [a, b]);
-% re-normalize p:
-p = normf*p;
-err = normf*err;
-
-% return:
 varargout = {p, err, status};
 
 end
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Input parsing.
 
-function [m, N, opts] = parseInputs(f, varargin)
+function [n, N, opts] = parseInputs(f, n)
 
-m = varargin{1};
-
-if ( m < 0 || m ~= round(m) )
-    error('CHEBFUN:CHEBFUN:firmpm:parseInputs', ...
-        'Degree of approximation must be a nonnegative integer.');
-end
-
-varargin = varargin(2:end);
-
-% Number of points for equioscillation:
-N = 2*m+2;
+varargin = {};
+N = n;
 
 % Parse name-value option pairs.
-baseTol = 1e-14;
-opts.tol = baseTol*(m^2 + 10); % Relative tolerance for deciding convergence.
-opts.maxIter = 100;            % Maximum number of allowable iterations.
-opts.displayIter = false;      % Print output after each iteration.
-opts.plotIter = false;         % Plot approximation at each iteration.
+opts.tol = 1e-16*(N^2 + 10); % Relative tolerance for deciding convergence.
+opts.maxIter = 40;           % Maximum number of allowable iterations.
+opts.displayIter = false;    % Print output after each iteration.
+opts.plotIter = false;       % Plot approximation at each iteration.
 
 for k = 1:2:length(varargin)
     if ( strcmpi('tol', varargin{k}) )
@@ -219,68 +218,94 @@ for k = 1:2:length(varargin)
     elseif ( strcmpi('plotfcns', varargin{k}) )
         opts.plotIter = true;
     else
-        error('CHEBFUN:CHEBFUN:firmpm:badInput', ...
+        error('CHEBFUN:CHEBFUN:pmRemez:badInput', ...
             'Unrecognized sequence of input parameters.')
     end
 end
 
 end
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Functions implementing the core part of the algorithm.
 
-function [p, h] = computeTrialFunctionPolynomial(fk, xk, w, m, N, dom)
+function xk = getInitialReference(f, N, bands)
+
+% In the polynomial case just use the Chebyshev points:
+xk = chebpts(N + 2, f.domain([1, end]));
+
+if ( length(bands) == 4 )
+    L = bands(2)-bands(1) + bands(4)-bands(3);
+    n1 = (N+2)*(bands(2)-bands(1))/L;
+    n2 = (N+2)*(bands(4)-bands(3))/L;
+    np = ceil(n1);
+    ns = floor(n2);
+    if ( np + ns > N + 2 )
+        np = np - 1;
+    end        
+    
+    if ( np + ns < N + 2 )
+        ns = ns + 1;
+    end
+    
+    xk1 = chebpts( np, bands(1:2));
+    xk2 = chebpts( ns, bands(3:4));
+    xk = [xk1; xk2];
+    if ( length(xk) ~= N + 2 )
+        error( 'length is not N+2' )
+    end
+end
+end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function [p, h] = computeTrialFunctionPolynomial(fk, xk, w, m, N, bands)
 
 % Vector of alternating signs.
-sigma = ones(N, 1);
+sigma = ones(N + 2, 1);
 sigma(2:2:end) = -1;
 
-h = (w'*fk) / (w'*sigma);             % Levelled reference error.
-pk = (fk - h*sigma);                  % Vals. of r*q in reference.
+h = (w'*fk) / (w'*sigma);                          % Levelled reference error.
+pk = (fk - h*sigma);                               % Vals. of r*q in reference.
 
-% Trial polynomial by interpolation:
-p = chebfun(@(x) trigBary(x, pk, xk, dom), dom, 2*m+1, 'trig');
+% Trial polynomial.
+p = chebfun(@(x) bary(x, pk, xk, w), [-1, 1], m + 1);
 
 end
 
-
-% TODO: There is a lot of overlap between the present case of trigonometric
-% remez and the usual polynomial remez. The common parts of the code should
-% factored out in future.
-
-function [xk, norme, err_handle, flag] = exchange(xk, h, method, f, p, Npts)
+function [xk, norme, err_handle, flag] = exchange(xk, h, method, f, p, Npts, bands)
 %EXCHANGE   Modify an equioscillation reference using the Remez algorithm.
-%   EXCHANGE(XK, H, METHOD, F, P) performs one step of the Remez algorithm
-%   for the best polynomial approximation of the CHEBFUN F of the target function
+%   EXCHANGE(XK, H, METHOD, F, P, Q) performs one step of the Remez algorithm
+%   for the best rational approximation of the CHEBFUN F of the target function
 %   according to the first method (METHOD = 1), i.e. exchanges only one point,
 %   or the second method (METHOD = 2), i.e. exchanges all the reference points.
 %   XK is a column vector with the reference, H is the levelled error, P is the
-%   trigonometric polynomial.
+%   numerator, and Q is the denominator of the trial rational function P/Q.
 %
 %   [XK, NORME, E_HANDLE, FLAG] = EXCHANGE(...) returns the modified reference
 %   XK, the supremum norm of the error NORME (included as an output argument,
-%   since it is readily computed in EXCHANGE and is used later in FIRPM), a
+%   since it is readily computed in EXCHANGE and is used later in REMEZ), a
 %   function handle E_HANDLE for the error, and a FLAG indicating whether there
-%   were at least Npts alternating extrema of the error to form the next
+%   were at least N+2 alternating extrema of the error to form the next
 %   reference (FLAG = 1) or not (FLAG = 0).
 %
-%   [XK, ...] = EXCHANGE([], 0, METHOD, F, P, Q, N) returns a grid of N
-%   points XK where the error F - P alternates in sign (but not necessarily
-%   equioscillates). This feature of EXCHANGE is useful to start FIRPM from an
+%   [XK, ...] = EXCHANGE([], 0, METHOD, F, P, Q, N + 2) returns a grid of N + 2
+%   points XK where the error F - P/Q alternates in sign (but not necessarily
+%   equioscillates). This feature of EXCHANGE is useful to start REMEZ from an
 %   initial trial function rather than an initial trial reference.
 
 % Compute extrema of the error.
-e_num = diff(f - p);
+e_num = diff(f - p) ;
 rts = roots(e_num, 'nobreaks');
-% Do not include the other end of the domain, since the domain
-% is assumed to be periodic:
-rr = [f.domain(1) ; rts];
+rr = [f.domain(1) ; rts; f.domain(end)];
+if ( length(bands) ==  4 )
+    %idx = (rr > dom(2)) & (rr < dom(3))
+    %rr(idx) = [];
+    rr = sort( [rr; bands(2); bands(3)] );
+end
 
 % Function handle output for evaluating the error.
 err_handle = @(x) feval(f, x) - feval(p, x);
 
 % Select exchange method.
-if ( method == 1 )                             % One-point exchange.
+if ( method == 1 )                           % One-point exchange.
     [ignored, pos] = max(abs(feval(err_handle, rr)));
     pos = pos(1);
 else                                           % Full exchange.
@@ -315,7 +340,7 @@ for i = 2:length(r)
     end
 end
 
-% Of the points we kept, choose Npts consecutive ones that include the maximum
+% Of the points we kept, choose n + 2 consecutive ones that include the maximum
 % of the error.
 [norme, index] = max(abs(es));
 d = max(index - Npts + 1, 1);
