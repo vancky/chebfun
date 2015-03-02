@@ -35,16 +35,9 @@ elseif ( isnumeric(A) )
             'CHEBOP * DOUBLE multiplication is defined only for scalars.');
     end
     
-    % Initialize C as a CHEBOP
     C = B;
-    
-    % Multiplication of anonymous functions is not supported in Matlab. Need to
-    % work around that.
-    funString = func2str(C.op);                       % Anon. func. string
-    firstRightParLoc = min(strfind(funString, ')'));  % First ) in string
-    funArgs = funString(2:firstRightParLoc);          % Grab variables name
-    C.op = eval(['@', funArgs, 'A*C.op', funArgs]);   % Create new anon. func
-    
+    C.op = @(varargin) A * C.op(varargin{:});
+
 elseif ( isa(A,'chebop') && isa(B,'chebop') )
 
     if ( A.inDims == Inf )
