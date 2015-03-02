@@ -175,6 +175,7 @@ classdef (InferiorClasses = {?double}) chebop
         bc = [];        % Other/internal/mixed boundary conditions
         init = [];      % Initial guess of a solution
         numVars = [];   % Number of variables the CHEBOP operates on.
+        inDims = [];    % Vector of dimensions of inputs, e.g. [Inf; 1; 1]
     end
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -210,8 +211,12 @@ classdef (InferiorClasses = {?double}) chebop
                 end
             end
             
-            % Assign operator and domain:
+            % Assign operator:
             N.op = op;
+
+            % Keep track of the number and dimensions of the inputs to N.
+            % If one of the inputs is a parameter, the user may specify it.
+            N.inDims = Inf(max(1,nargin(op)-1), 1);
             
             % Ensure that the domain is a row vector, not a column vector:
             assert( (size(dom, 1) == 1) && ( size(dom, 2) > 1 ), ...

@@ -6,10 +6,13 @@ function nIn = nargin(N)
 % Copyright 2014 by The University of Oxford and The Chebfun Developers.
 % See http://www.chebfun.org/ for Chebfun information.
 
-if ( ~isempty(N.op) )
+if ( isempty(N.op) )
+    nIn = 0;
+elseif ( nargin(N.op) >= 0 )
     nIn = nargin(N.op);
 else
-    nIn = 0;
+    % Number of variables N acts on plus one for the independent variable.
+    nIn = length(N.inDims) + 1;
 end
-    
+
 end

@@ -36,7 +36,7 @@ function out = feval(N, varargin)
 % See http://www.chebfun.org/ for Chebfun information.
 
 % Support for calling a linear CHEBOP with a numerical input to get its
-% discretization. This is deprecated
+% discretization. This is deprecated.
 if ( (nargin == 2) && isnumeric(varargin{1}) )
     warning('CHEBFUN:CHEBOP:feval:deprecated', ...
         ['FEVAL(N, DIM) or N(DIM) exists only to provide backwards\n', ...
@@ -127,7 +127,7 @@ if ( numberOfInputs == 0 )
 end
 
 if ( numberOfInputs == 1)
-    % If N has one input arguments, either we have a scalar problem, or the
+    % If N has one input argument, either we have a scalar problem, or the
     % problem is specified on chebmatrix format, e.g.,
     %   N.op = @(u) [ diff(u{1},2) + u{2}; u{1} + diff(u{2}];
     % Here, importantly, x does not appear in the argument list for N.op.
@@ -231,8 +231,13 @@ end
 function out = doEval(N, args)
 
     numberOfInputs = nargin(N);
-    if ( numel(args) == numberOfInputs - 1 )
-        % Check if we need to include an x (independent variable):
+    % Check if we need to include an x (independent variable).
+    if ( numel(args) == numberOfInputs - 1 || numberOfInputs == -1 )
+        % The reason that numberOfInputs may be equal to -1 is this:
+        % When CHEBOPs are PLUSed, the op of the resulting chebop
+        % is defined using VARARGIN which returns NARGIN == -1.
+        % In that case it is assumed that the op does include the
+        % independent variable in its definition.
         x = chebfun(@(x) x, N.domain);
         args = [ {x} ; args ];
     end
