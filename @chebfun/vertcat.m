@@ -25,7 +25,7 @@ chebfun1 = varargin{find(isCheb, 1, 'first')};
 if ( ~all(chebfun1(1).isTransposed == ...
         cellfun(@(f) double(f(1).isTransposed), varargin(isCheb)) ) )
     error('CHEBFUN:CHEBFUN:vertcat:transpose', ...
-        'Dimensions of matrices being concatenated are not consistent. ');
+        'Dimensions of matrices being concatenated are not consistent.');
 end
 
 numElements = cellfun(@(u) numel(u), varargin);
