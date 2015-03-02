@@ -109,7 +109,11 @@ while ( ~accept )
     uTrial = u + lambda*delta;
     
     % Evaluate the operator:
-    if ( numberOfInputs < 2 )
+    if ( numberOfInputs < 2 && numberOfInputs > 0 )
+        % When CHEBOPs are PLUSed, the op of the resulting chebop
+        % is defined using VARARGIN which returns NARGIN == -1.
+        % In that case it is assumed that the op does include the
+        % independent variable in its definition.
         NopTrial = feval(N, uTrial);
     else
         NopTrial = feval(N, x, uTrial);
