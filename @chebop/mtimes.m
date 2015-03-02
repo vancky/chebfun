@@ -45,13 +45,16 @@ elseif ( isnumeric(A) )
     funArgs = funString(2:firstRightParLoc);          % Grab variables name
     C.op = eval(['@', funArgs, 'A*C.op', funArgs]);   % Create new anon. func
     
-elseif ( isa(A,'chebop') && isa(B,'chebop') )       
-    % CHEBOP composition is not yet supported. It will probably be a mess once
-    % we start getting systems involved, as the inputs need to be shuffled
-    % correctly. A remedy might be through a nested function in this file.
-    error('CHEBFUN:CHEBOP:mtimes:notSupported1',...
-        'CHEBOP composition is not supported.');   
-    
+elseif ( isa(A,'chebop') && isa(B,'chebop') )
+
+    if ( A.inDims == Inf )
+        C = chebop(@(varargin) A.op(varargin{1}, B.op(varargin{:})));
+        C.inDims = B.inDims;
+    else
+        error('CHEBFUN:CHEBOP:mtimes:notSupported', ...
+            'CHEBOP composition for systems is not supported.');
+    end
+
 else 
     error('CHEBFUN:CHEBOP:mtimes:notSupported2', ...
         '%s * %s multiplication is not supported.', class(A), class(B));
