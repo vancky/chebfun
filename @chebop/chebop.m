@@ -273,7 +273,41 @@ classdef (InferiorClasses = {?double}) chebop
         N = and(N,BC)
         
     end
-    
+
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %% PUBLIC STATIC METHODS
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    methods ( Access = public, Static = true )
+
+        function D = diff()
+            D = chebop(@(x,u) diff(u));
+        end
+
+        function I = eye()
+            I = chebop(@(x,u) u);
+        end
+
+        function M = mult(varargin)
+            if nargin > 0
+                % Multiplication operator for the given input.
+                f = varargin{1};
+                M = chebop(@(x,u) f.*u);
+            else
+                % Multiplication operator generator.
+                M = @(f) chebop(@(x,u) f.*u);
+            end
+        end
+
+        function K = cumsum()
+            K = chebop(@(x,u) cumsum(u));
+        end
+
+        function Z = zeros()
+            Z = chebop(@(x,u) 0*u);
+        end
+
+    end
+
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %% PRIVATE METHODS:
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
