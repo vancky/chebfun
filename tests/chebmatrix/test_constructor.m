@@ -9,7 +9,7 @@ seedRNG(42)
 r = rand(2);
 A = chebmatrix(r);
 B = chebmatrix(num2cell(r));
-pass(1) = norm(A - B) < 1e-14;
+pass(1) = norm(A - B) == 0;
 
 % This shouldn't work:
 try
