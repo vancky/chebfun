@@ -83,7 +83,7 @@ deltamin = inf; % Minimum error encountered.
 diffx = 1;      % Maximum correction to trial reference.
 
 % Compute an initial reference set to start the algorithm.
-xk = getInitialReference(f, m, n, N);
+xk = getInitialReference(f, m, n, N, opts);
 xo = xk;
 
 % Print header for text output display if requested.
@@ -109,11 +109,11 @@ while ( (delta/normf > opts.tol) && (iter < opts.maxIter) && (diffx > 0) )
     end
 
     % Update the exchange set using the Remez algorithm with full exchange.
-    [xk, err, err_handle] = exchange(xk, h, 2, f, p, q, N + 2);
+    [xk, err, err_handle] = exchange(xk, h, 2, f, p, q, N + 2, opts);
 
     % If overshoot, recompute with one-point exchange.
     if ( err/normf > 1e5 )
-        [xk, err, err_handle] = exchange(xo, h, 1, f, p, q, N + 2);
+        [xk, err, err_handle] = exchange(xo, h, 1, f, p, q, N + 2, opts);
     end
 
     % Update max. correction to trial reference and stopping criterion.
@@ -198,6 +198,7 @@ opts.tol = 1e-16*(N^2 + 10); % Relative tolerance for deciding convergence.
 opts.maxIter = 20;           % Maximum number of allowable iterations.
 opts.displayIter = false;    % Print output after each iteration.
 opts.plotIter = false;       % Plot approximation at each iteration.
+opts.ignoredIntervals = [];
 
 for k = 1:2:length(varargin)
     if ( strcmpi('tol', varargin{k}) )
@@ -208,11 +209,51 @@ for k = 1:2:length(varargin)
         opts.displayIter = true;
     elseif ( strcmpi('plotfcns', varargin{k}) )
         opts.plotIter = true;
+    elseif ( strcmpi('ignore', varargin{k}) )
+        ignoredIntervals = varargin{k+1};
+        if ( ~parseIgnoreIntervals(f, ignoredIntervals) )
+            error('CHEBFUN:CHEBFUN:remez:compactsets', ...
+            'Don''t care regions are not defined properly.')
+        else
+            opts.ignoredIntervals = ignoredIntervals;
+        end
     else
         error('CHEBFUN:CHEBFUN:remez:badInput', ...
             'Unrecognized sequence of input parameters.')
     end
 end
+
+end
+
+function out = parseIgnoreIntervals(f, intervals)
+a = f.domain(1);
+b = f.domain(end);
+
+if ( ~isvector(intervals) || ~isa(intervals, 'double') )
+    out = 0;
+    error('CHEBFUN:CHEBFUN:remez:parseIgnoreIntervals', ...
+            'Intervals must be a vector of doubles.' );
+end
+
+if ( any(intervals > b) || any(intervals < a) )
+    out = 0;
+    error('CHEBFUN:CHEBFUN:remez:parseIgnoreIntervals', ...
+            'Intervals must be contained inside the domain.');
+end
+
+if ( rem(length(intervals), 2) ~= 0 )
+    out = 0;
+    error('CHEBFUN:CHEBFUN:remez:parseIgnoreIntervals', ...
+            'Intervals must be an even length vector.');
+end
+
+if ( any(diff(intervals) <= 0) )
+    out = 0;
+    error('CHEBFUN:CHEBFUN:remez:parseIgnoreIntervals', ...
+            'Intervals must be monotonically increasing.');
+end
+
+out = 1;
 
 end
 
@@ -259,11 +300,14 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Functions implementing the core part of the algorithm.
 
-function xk = getInitialReference(f, m, n, N)
+function xk = getInitialReference(f, m, n, N, opts)
 
 % If doing rational Remez, get initial reference from trial function generated
 % by CF or Chebyshev-Pade.
 flag = 0;
+a = f.domain(1);
+b = f.domain(end);
+
 if ( n > 0 )
     if ( numel(f.funs) == 1 )
         %[p, q] = chebpade(f, m, n);
@@ -272,13 +316,51 @@ if ( n > 0 )
         %[p, q] = chebpade(f, m, n, 5*N);
         [p, q] = cf(f, m, n, 5*N);
     end
-    [xk, err, e, flag] = exchange([], 0, 2, f, p, q, N + 2);
+    [xk, err, e, flag] = exchange([], 0, 2, f, p, q, N + 2, opts);
 end
 
 % In the polynomial case or if the above procedure failed to produce a reference
 % with enough equioscillation points, just use the Chebyshev points.
 if ( flag == 0 )
-    xk = chebpts(N + 2, f.domain([1, end]));
+    if ( isempty(opts.ignoredIntervals) )
+        xk = chebpts(N + 2, [a, b] );
+    else
+        intervals = opts.ignoredIntervals;
+        xk = [];
+        % Compute the length of the ignored intervals:
+        ignoredLength = 0;
+        for j = 2:2:length(intervals)
+           ignoredLength = ignoredLength + intervals(j)-intervals(j-1);
+        end
+        domainLength = b - a - ignoredLength;
+
+        intervals = intervals(:);
+        % [TODO] Add check to see a and b are not already in
+        % intervals:
+        intervals = [a; intervals; b];
+        for j = 1:2:length(intervals)
+            % This subinterval [c, d]:
+            c = intervals(j);
+            d = intervals(j+1);
+            nPts = (N+2)*(d-c)/domainLength;
+            nPts = round(nPts);
+            if ( nPts > 0 )
+                pts = chebpts(nPts, [c, d]);
+                xk = [xk; pts];
+            end
+        end
+
+        while (length(xk) < N + 2)
+            idx = 2*randi(length(intervals)/2, 1) - 1;
+            xx = intervals(idx) + (intervals(idx+1)-intervals(idx))*rand();
+            xk = sort([xk; xx]);
+        end
+
+        while ( length(xk) > N + 2)
+            idx = randi(length(xk), 1);
+            xk(idx) = [];
+        end
+    end
 end
 
 xo = xk;
@@ -334,7 +416,7 @@ q = chebfun(@(x) bary(x, qk, xk, w), dom, n + 1);
 
 end
 
-function [xk, norme, err_handle, flag] = exchange(xk, h, method, f, p, q, Npts)
+function [xk, norme, err_handle, flag] = exchange(xk, h, method, f, p, q, Npts, opts)
 %EXCHANGE   Modify an equioscillation reference using the Remez algorithm.
 %   EXCHANGE(XK, H, METHOD, F, P, Q) performs one step of the Remez algorithm
 %   for the best rational approximation of the CHEBFUN F of the target function
@@ -359,6 +441,19 @@ function [xk, norme, err_handle, flag] = exchange(xk, h, method, f, p, q, Npts)
 e_num = (q.^2).*diff(f) - q.*diff(p) + p.*diff(q);
 rts = roots(e_num, 'nobreaks');
 rr = [f.domain(1) ; rts; f.domain(end)];
+
+if ( ~isempty(opts.ignoredIntervals) )
+    ignoredIntervals = opts.ignoredIntervals;
+    ignoredIntervals = ignoredIntervals(:);
+    rr = sort([rr; ignoredIntervals]);
+    for j = 1:2:length(ignoredIntervals)
+        % Ignore extrema between the open interval(c, d):
+        c = ignoredIntervals(j);
+        d = ignoredIntervals(j+1);
+        rr( (rr > c) & (rr < d) ) = [];
+    end
+end
+
 
 % Function handle output for evaluating the error.
 err_handle = @(x) feval(f, x) - feval(p, x)./feval(q, x);
