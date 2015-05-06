@@ -507,6 +507,9 @@ classdef chebfun
         
         % Discrete sine transform:
         y = dst(u, kind);
+
+        % FIRPM filter design:
+        varargout = firpm(n, freqs, f);
         
         % Inverse discrete sine transform:
         u = idst(y, kind);
