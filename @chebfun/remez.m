@@ -49,25 +49,9 @@ function varargout = remez(f, varargin)
 % See http://www.chebfun.org/ for Chebfun information.
 
 dom = f.domain([1, end]);
-normf = norm(f);
-
-if ( ~isreal(f) )
-    error('CHEBFUN:CHEBFUN:remez:real', ...
-        'REMEZ only supports real valued functions.');
-end
-
-if ( numColumns(f) > 1 )
-    error('CHEBFUN:CHEBFUN:remez:quasi', ...
-        'REMEZ does not currently support quasimatrices.');
-end
-
-if ( issing(f) )
-    error('CHEBFUN:CHEBFUN:remez:singularFunction', ...
-        'REMEZ does not currently support functions with singularities.');
-end
 
 % Parse the inputs.
-[m, n, N, rationalMode, opts] = parseInputs(f, varargin{:});
+[m, n, N, normf, rationalMode, opts] = parseInputs(f, varargin{:});
 
 % With zero denominator degree, the denominator polynomial is trivial.
 if ( n == 0 )
@@ -177,7 +161,18 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Input parsing.
 
-function [m, n, N, rationalMode, opts] = parseInputs(f, varargin)
+function [m, n, N, normf, rationalMode, opts] = parseInputs(f, varargin)
+
+if ( ~isreal(f) )
+    error('CHEBFUN:CHEBFUN:remez:real', ...
+        'REMEZ only supports real valued functions.');
+end
+
+if ( numColumns(f) > 1 )
+    error('CHEBFUN:CHEBFUN:remez:quasi', ...
+        'REMEZ does not currently support quasimatrices.');
+end
+
 
 % Detect polynomial / rational approximation type and parse degrees.
 if ( ~mod(nargin, 2) ) % Even number of inputs --> polynomial case.
@@ -222,6 +217,38 @@ for k = 1:2:length(varargin)
             'Unrecognized sequence of input parameters.')
     end
 end
+
+normf = norm(f, 2);
+
+if ( issing(f) )
+    if ( isinf(f) )
+        % See if singularities are in ignored regions:
+        ignoredIntervals = opts.ignoredIntervals(:);        
+        if ( isempty(ignoredIntervals) )
+            error('CHEBFUN:CHEBFUN:remez:singularFunction', ...
+                'REMEZ does not currently support functions with unbounded singularities.');            
+        else
+            vals = abs(feval(f, f.domain));
+            % Points in the domain where singularity occurs:
+            infPoints = f.domain(vals == inf );
+            
+            % See if the singulariy is in the ignored region:
+            for j = 1:length(infPoints)
+                i = 1;
+                while ( (i <= length(ignoredIntervals)/2) && (infPoints(j) > ignoredIntervals(2*i-1)) )
+                    i = i + 1;
+                end
+                i = max(i - 1, 1);
+                if ( infPoints(j) > ignoredIntervals(2*i) )
+                    error('CHEBFUN:CHEBFUN:remez:singularFunction', ...
+                        'REMEZ does not currently support functions with unbounded singularities.');
+                end
+            end
+            normf = 100;
+        end
+    end
+end
+
 
 end
 
@@ -446,11 +473,32 @@ if ( ~isempty(opts.ignoredIntervals) )
     ignoredIntervals = opts.ignoredIntervals;
     ignoredIntervals = ignoredIntervals(:);
     rr = sort([rr; ignoredIntervals]);
+    % TODO: This needs to be properly done:
+    N = length(rr);
+    j = 1;
+    while ( j < N )        
+        if ( abs(rr(j)-rr(j+1)) < 100*eps )
+            rr(j) = [];
+            N = N - 1;
+        else
+            j = j + 1;
+        end
+    end
+    rr = unique(rr);
     for j = 1:2:length(ignoredIntervals)
         % Ignore extrema between the open interval(c, d):
         c = ignoredIntervals(j);
         d = ignoredIntervals(j+1);
         rr( (rr > c) & (rr < d) ) = [];
+    end
+    if ( abs(ignoredIntervals(1) - f.domain(1)) < 100*eps && ...
+            abs(rr(1) - f.domain(1)) < 100*eps )
+        rr(1) = [];
+    end
+    
+    if ( abs(ignoredIntervals(end) - f.domain(end)) < 100*eps && ...
+            abs(rr(end) - f.domain(end)) < 100*eps )
+        rr(end) = [];
     end
 end
 
