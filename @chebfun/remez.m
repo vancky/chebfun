@@ -473,33 +473,8 @@ if ( ~isempty(opts.ignoredIntervals) )
     ignoredIntervals = opts.ignoredIntervals;
     ignoredIntervals = ignoredIntervals(:);
     rr = sort([rr; ignoredIntervals]);
-    % TODO: This needs to be properly done:
-    N = length(rr);
-    j = 1;
-    while ( j < N )        
-        if ( abs(rr(j)-rr(j+1)) < 100*eps )
-            rr(j) = [];
-            N = N - 1;
-        else
-            j = j + 1;
-        end
-    end
-    rr = unique(rr);
-    for j = 1:2:length(ignoredIntervals)
-        % Ignore extrema between the open interval(c, d):
-        c = ignoredIntervals(j);
-        d = ignoredIntervals(j+1);
-        rr( (rr > c) & (rr < d) ) = [];
-    end
-    if ( abs(ignoredIntervals(1) - f.domain(1)) < 100*eps && ...
-            abs(rr(1) - f.domain(1)) < 100*eps )
-        rr(1) = [];
-    end
-    
-    if ( abs(ignoredIntervals(end) - f.domain(end)) < 100*eps && ...
-            abs(rr(end) - f.domain(end)) < 100*eps )
-        rr(end) = [];
-    end
+    % Exclude points in the ignored intervals:
+    rr = pointsInDomain(f.domain(1), f.domain(end), ignoredIntervals, rr);
 end
 
 
@@ -583,5 +558,39 @@ function doDisplayIter(iter, err, h, delta, normf, diffx)
 disp([num2str(iter), '        ', num2str(err, '%5.4e'), '        ', ...
     num2str(abs(h), '%5.4e'), '        ', ...
     num2str(delta/normf, '%5.4e'), '        ', num2str(diffx, '%5.4e')])
+
+end
+
+function points = pointsInDomain( a, b, ignoredIntervals, points)
+% POINTS = POINTSINDOMAIN(A, B, ignoredIntervals, POINTS)
+% returns POINTS which are contained in the interval [A,B] but not in any
+% of the subintervals specified in IGNOREDINTERVALS. If A or B are part of
+% the ignored intervals, then these points are also removed.
+
+points = points(:);
+% Discard points outside the interval:
+points = points(points >= a);
+points = points(points <= b);
+
+for i = 1:length(ignoredIntervals)/2
+    c = ignoredIntervals(2*i-1);
+    d = ignoredIntervals(2*i);
+    % ignore points in the open itnerval (c, d)
+    idx1 = points > c;
+    idx2 = points < d;
+    idx = idx1 & idx2;
+    points(idx) = [];
+end
+
+% Check the end-points:
+if ( abs(ignoredIntervals(1) - a) < 100*eps )
+    idx = abs(points-a) < 100*eps;
+    points(idx) = [];
+end
+
+if ( abs(ignoredIntervals(end) - b) < 100*eps )
+    idx = abs(points-b) < 100*eps;
+    points(idx) = [];    
+end
 
 end
