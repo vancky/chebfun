@@ -1,8 +1,8 @@
-function varargout = firpm(n, freqs, f)
+function [H, h, err, res] = firpm(order, freqs, f, varargin)
 %FIRPM   FIR minimax filter design for real valued chebfuns.
 %   H = FIRPM(M, FREQS, F) is a periodic chebfun of lenght M+1 representing
 %   an order M filter.
-%   N corresponds to a filter length of N+1.
+%   ORDER corresponds to a filter length of ORDER+1.
 %   FREQS is a vector with numbers in [0, 1]
 
 
@@ -10,10 +10,13 @@ function varargout = firpm(n, freqs, f)
 % See http://www.chebfun.org/ for Chebfun information.
 
 
-%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Wrapper to call the pmRemez Algorithm
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Check arguments:
+if ( order <= 0 || order ~= round(order) )
+    error( 'CHEBFUN:CHEBFUN:firpm', ...
+            'order must be a positive integer.');
+else
+    n = order;
+end
 
 if ( isa(f, 'chebfun') )
     dom = domain(f);
@@ -44,7 +47,7 @@ intervals = sort(cos(pi*freqs));
 [p, err, status] = remez(g, n/2, 'ignore', intervals);
 status.xk = sort(1/pi*acos(status.xk));
 a = chebcoeffs(p);
-c = [1/2*a(end:-1:2); a(1); 1/2*a(2:end);];
-H = chebfun(c, 'trig', 'coeffs');
-varargout = {H, err, status};
+h = [1/2*a(end:-1:2); a(1); 1/2*a(2:end);];
+H = chebfun(h, 'trig', 'coeffs');
+res = status;
 end

@@ -445,12 +445,13 @@ end
 
 function [xk, norme, err_handle, flag] = exchange(xk, h, method, f, p, q, Npts, opts)
 %EXCHANGE   Modify an equioscillation reference using the Remez algorithm.
-%   EXCHANGE(XK, H, METHOD, F, P, Q) performs one step of the Remez algorithm
+%   EXCHANGE(XK, H, METHOD, F, P, Q, W) performs one step of the Remez algorithm
 %   for the best rational approximation of the CHEBFUN F of the target function
 %   according to the first method (METHOD = 1), i.e. exchanges only one point,
 %   or the second method (METHOD = 2), i.e. exchanges all the reference points.
 %   XK is a column vector with the reference, H is the levelled error, P is the
-%   numerator, and Q is the denominator of the trial rational function P/Q.
+%   numerator, and Q is the denominator of the trial
+%   rational function P/Q and W is the weight function.
 %
 %   [XK, NORME, E_HANDLE, FLAG] = EXCHANGE(...) returns the modified reference
 %   XK, the supremum norm of the error NORME (included as an output argument,
