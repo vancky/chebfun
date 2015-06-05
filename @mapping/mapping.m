@@ -116,6 +116,56 @@ classdef mapping
     
     methods ( Static = true )
         
+        function map = exp(a, b)
+        %The structure MAP consists of three
+        %   function handles:
+        %      MAP.FOR is a function that maps [-1,1] to [ENDS(1), ENDS(2)].
+        %      MAP.DER is the derivative of the map defined in MAP.FOR
+        %      MAP.INV is the inverse map.
+
+        if ( a == 0 && b == 0 )
+            map = mapping.linear([-1,1]);
+        elseif ( b == 0 )
+            ForHandle = @(y) (2*exp(a*(y+1))-exp(2*a)-1)/(exp(2*a)-1);
+            DerHandle = @(y) 2*a*exp(a*(y+1))/(exp(2*a)-1);
+            InvHandle = @(x) log(.5*(x*(exp(2*a)-1)+(exp(2*a)+1)))/a-1;
+            map = mapping(ForHandle, DerHandle, InvHandle);
+        elseif ( a == 0 )
+            ForHandle = @(y) (2*exp(b*(-1-y))-exp(-2*b)-1)/(exp(-2*b)-1);
+            DerHandle = @(y) -2*b*exp(b*(-1-y))/(exp(-2*b)-1);
+            InvHandle = @(x) log(.5*(x*(exp(-2*b)-1)+(exp(-2*b)+1)))/b+1;
+            map = mapping(ForHandle, DerHandle, InvHandle);
+        else
+            error('Can not do exponential mapping to both ends yet.')
+        end
+            
+        end
+        
+        function map = pow(a, b)
+        %The structure MAP consists of three
+        %   function handles:
+        %      MAP.FOR is a function that maps [-1,1] to [ENDS(1), ENDS(2)].
+        %      MAP.DER is the derivative of the map defined in MAP.FOR
+        %      MAP.INV is the inverse map.
+
+        if ( a == 0 && b == 0 )
+            map = mapping.linear([-1,1]);
+        elseif ( b == 0 )
+            ForHandle = @(y) 2^(1-1/a)*(1+y).^(1/a)-1;
+            DerHandle = @(y) 2^(1-1/a)*(1+y).^(1/a-1)/a;
+            InvHandle = @(x) 2^(1-a)*(1+x).^a - 1;
+            map = mapping(ForHandle, DerHandle, InvHandle);
+        elseif ( a == 0 )
+            ForHandle = @(y) 1-2^(1-1/b)*(1-y).^(1/b);
+            DerHandle = @(y) 2^(1-1/b)*(1-y).^(1/b-1)/b;
+            InvHandle = @(x) 2^(1-b)*(1-x).^b - 1;
+            map = mapping(ForHandle, DerHandle, InvHandle);
+        else
+            error('Can not do power mapping to both ends yet.')
+        end
+            
+        end
+        
         function map = linear(ends)
         %LINEAR   Creates a linear map structure for BNDFUN objects.
         %   MAP = LINEAR(ENDS), where ENDS is a two-vector, returns a structure

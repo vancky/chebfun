@@ -54,21 +54,21 @@ if ( nargin == 1 || isempty(g) )
     % Update the xLim: If the onefun is bounded, xLim is not changed. If the 
     % onefun is unbounded (i.e. singfun with poles), then xLim is tweaked to pad
     % extra space at the end where function blows up:
-    if ( isfinite(data.xLim(1)) );
-        % If the left endpoint is finite:
-        data.xLim(1) = (data.xLim(1) + xLimWindow(1))/2;
-    else
-        % If the left endpoint is -Inf:
-        data.xLim(1) = max([data.xLim(1) xLimWindow(1)]);
-    end
-    
-    if ( isfinite(data.xLim(2)) );
-        % If the right endpoint is finite:
-        data.xLim(2) = (data.xLim(2) + xLimWindow(2))/2;
-    else
-        % If the right endpoint is Inf:
-        data.xLim(2) = min([data.xLim(2) xLimWindow(2)]);
-    end
+%     if ( isfinite(data.xLim(1)) );
+%         % If the left endpoint is finite:
+%         data.xLim(1) = (data.xLim(1) + xLimWindow(1))/2;
+%     else
+%         % If the left endpoint is -Inf:
+%         data.xLim(1) = max([data.xLim(1) xLimWindow(1)]);
+%     end
+%     
+%     if ( isfinite(data.xLim(2)) );
+%         % If the right endpoint is finite:
+%         data.xLim(2) = (data.xLim(2) + xLimWindow(2))/2;
+%     else
+%         % If the right endpoint is Inf:
+%         data.xLim(2) = min([data.xLim(2) xLimWindow(2)]);
+%     end
     
     % Sort out the jumps:
     data.xJumps = [f.domain(1) ; NaN ; f.domain(2)];
