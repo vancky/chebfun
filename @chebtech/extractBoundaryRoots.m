@@ -91,6 +91,9 @@ while ( ( ( nargin == 1 ) && any( min(endValues, [], 1) <= tol ) ) ...
     
     % Construct the matrix for the recurrence:
     n = length(f);
+    if ( n == 1 )
+        break
+    end
     e = ones(n-1, 1);
     D = spdiags([.5*e, sgn*e, .5*e], 0:2, n-1, n-1);
     D(1) = 1; %#ok<SPRIX>

@@ -126,14 +126,14 @@ classdef mapping
         if ( a == 0 && b == 0 )
             map = mapping.linear([-1,1]);
         elseif ( b == 0 )
-            ForHandle = @(y) (2*exp(a*(y+1))-exp(2*a)-1)/(exp(2*a)-1);
+            ForHandle = @(y) (2*exp(a*(y+1)) - exp(2*a) - 1) / (exp(2*a) - 1);
             DerHandle = @(y) 2*a*exp(a*(y+1))/(exp(2*a)-1);
-            InvHandle = @(x) log(.5*(x*(exp(2*a)-1)+(exp(2*a)+1)))/a-1;
+            InvHandle = @(x) log(.5*(x*(exp(2*a)-1)+(exp(2*a)+1)))/a - 1;
             map = mapping(ForHandle, DerHandle, InvHandle);
         elseif ( a == 0 )
-            ForHandle = @(y) (2*exp(b*(-1-y))-exp(-2*b)-1)/(exp(-2*b)-1);
-            DerHandle = @(y) -2*b*exp(b*(-1-y))/(exp(-2*b)-1);
-            InvHandle = @(x) log(.5*(x*(exp(-2*b)-1)+(exp(-2*b)+1)))/b+1;
+            ForHandle = @(y) (2*exp(-b*(y+1)) - exp(-2*b) - 1) / (exp(-2*b) - 1);
+            DerHandle = @(y) -2*b*exp(-b*(y+1))/(exp(-2*b)-1);
+            InvHandle = @(x) log(.5*(x*(exp(-2*b)-1)+(exp(-2*b)+1)))/b + 1;
             map = mapping(ForHandle, DerHandle, InvHandle);
         else
             error('Can not do exponential mapping to both ends yet.')
@@ -158,7 +158,7 @@ classdef mapping
         elseif ( a == 0 )
             ForHandle = @(y) 1-2^(1-1/b)*(1-y).^(1/b);
             DerHandle = @(y) 2^(1-1/b)*(1-y).^(1/b-1)/b;
-            InvHandle = @(x) 2^(1-b)*(1-x).^b - 1;
+            InvHandle = @(x) 1 - 2^(1-b)*(1-x).^b;
             map = mapping(ForHandle, DerHandle, InvHandle);
         else
             error('Can not do power mapping to both ends yet.')

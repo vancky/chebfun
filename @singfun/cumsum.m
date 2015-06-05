@@ -190,9 +190,14 @@ function g = singIntegral(f)
     else
         % Log term: integer poles with constant or non-constant smooth part:
         % [TODO]: Construct a representation of log.
-        error('CHEBFUN:SINGFUN:cumsum:noLog', ...
-            ['cumsum does not support the case in which the indefinite ' ...
-             'integral has a logarithmic term.'])
+        [u, rootsLeft, ignored] = extractBoundaryRoots(u);
+        e1 = exps(1)+rootsLeft;
+        gFun = @(x) (1+x).^(1-e1).*feval(u, x) + (1+x).*log(1+x);
+        g.smoothPart = mapfun(gFun, mapping.exp(10,0));
+        g.exponents = [e1-1, 0];
+%         error('CHEBFUN:SINGFUN:cumsum:noLog', ...
+%             ['cumsum does not support the case in which the indefinite ' ...
+%              'integral has a logarithmic term.'])
     end
     
     % Flip back so singularity is on the right for the case with singularity at
@@ -205,7 +210,7 @@ function g = singIntegral(f)
     if ( g.exponents(1) >= 0 )
         % suppress the warning:
         warnState = warning('off', 'CHEBFUN:SINGFUN:plus:exponentDiff');
-        g = g - get(g, 'lval');
+%         g = g - get(g, 'lval');
         warning(warnState)        
     end
 

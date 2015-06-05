@@ -61,6 +61,24 @@ classdef mapfun < unbndfun
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     methods ( Access = public, Static = false ) 
         
+        function f = flipud(f)
+            f.onefun = flipud(f.onefun);
+        end
+        
+        function f = plus(f, g)
+            if ( isnumeric(f) )
+                f = plus(g, f);
+            elseif ( isnumeric(g) )
+                f.onefun = f.onefun + g;
+            else
+                error('not supported');
+            end
+        end
+        
+        function f = minus(f, g)
+            f = plut(f, -g);
+        end
+        
     end
     
 end
