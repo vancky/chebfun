@@ -90,7 +90,7 @@ classdef bndfun < classicfun
             end
 
             % TODO:  Why do we rescale the hscale like this?
-            data.hscale = data.hscale / diff(data.domain);
+%             data.hscale = data.hscale / diff(data.domain);
 
             % Remap the OP to be a function on [-1, 1].
             linmap = bndfun.createMap(data.domain);

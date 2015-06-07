@@ -92,4 +92,8 @@ elseif ( ~isfield(data, 'mapping') )
     data.mapping = [];
 end
 
+if ( isempty(data.mapping) && isfield(pref.mapPrefs) )
+    data.mapping = pref.mapPrefs.mapping;
+end
+
 end

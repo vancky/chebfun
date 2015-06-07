@@ -831,6 +831,10 @@ function [op, dom, data, pref, flags] = parseInputs(op, varargin)
             % Translate "splitMaxLength" --> "splitPrefs.splitMaxLength".
             keywordPrefs.splitPrefs.splitMaxLength = args{2};
             args(1:2) = [];
+        elseif ( strcmpi(args{1}, 'map') )
+            % Translate "map" --> ?
+            data.mapping = args{2};
+            args(1:2) = [];
         elseif ( ischar(args{1}) )
             % Update these preferences:
             if ( length(args) < 2 )

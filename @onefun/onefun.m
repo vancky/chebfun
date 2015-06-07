@@ -67,6 +67,8 @@ classdef onefun % (Abstract)
                 if ( issmooth(obj) )
                     obj = obj.smoothPart;
                 end
+            elseif ( isfield(data, 'mapping') )
+                obj = mapfun(op, data, pref);
             else
                 obj = smoothfun.constructor(op, data, pref);
             end
