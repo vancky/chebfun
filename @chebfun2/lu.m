@@ -20,7 +20,7 @@ function varargout = lu( f, thresh )
 %
 % See also CHOL, QR. 
 
-% Copyright 2014 by The University of Oxford and The Chebfun Developers.
+% Copyright 2015 by The University of Oxford and The Chebfun Developers.
 % See http://www.chebfun.org/ for Chebfun information.
 
 if ( nargin == 1 )
@@ -48,7 +48,7 @@ k = length( f );
 % Make C unit lower triangular 
 Scl = diag( C( PivLoc(:, 2), : ) );
 C = C * spdiags( 1./Scl, 0, k, k );
-R = ( spdiags( Scl, 0, k, k ) * D ) * R; 
+R = R * ( spdiags( Scl, 0, k, k ) * D );
 
 L = C; 
 U = R; 

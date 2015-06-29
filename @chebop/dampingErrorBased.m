@@ -42,7 +42,7 @@ function [u, dampingInfo] = dampingErrorBased(N, u, rhs, delta, L, disc, damping
 %        Problems for Ordinary Differential Equations in the Continuous
 %        Framework. DPhil Thesis, Oxford, 2013.
 
-% Copyright 2014 by The University of Oxford and The Chebfun Developers.
+% Copyright 2015 by The University of Oxford and The Chebfun Developers.
 % See http://www.chebfun.org/ for Chebfun information.
 
 % Extract info from the dampingInfo struct
@@ -155,7 +155,7 @@ while ( ~accept )
     
     if ( lambdaPrime == 1 && normDeltaBar < errTol )
         % We have converged within the damped phase! 
-        % solvebvpNonlinear will find out about our success.
+        % solvebvpNonlinear() will find out about our success.
         u = uTrial + deltaBar; %#ok<NASGU>
         success = 1;
         giveUp = 0; 

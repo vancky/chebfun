@@ -38,7 +38,7 @@ function g = inv(f, varargin)
 %
 % See also ROOTS.
 
-% Copyright 2014 by The University of Oxford and The Chebfun Developers.
+% Copyright 2015 by The University of Oxford and The Chebfun Developers.
 % See http://www.chebfun.org/ for Chebfun information.
 
 % No quasimatrix support:
@@ -146,7 +146,10 @@ end
 
 % Assign preferences:
 if ( opts.algorithm == 2 );
-    pref.techPrefs.resampling = 1;
+    % TODO:  CHEBFUN is not supposed to set the refinementFunction preference
+    % because it doesn't belong to the list of "abstract" preferences required
+    % of all techs.  Do we really need to alter it here?
+    pref.techPrefs.refinementFunction = 'resampling';
 end
 pref.techPrefs.eps = tol;
 pref.techPrefs.minSamples = length(f);

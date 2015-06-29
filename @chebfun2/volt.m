@@ -14,7 +14,7 @@ function f = volt( K, v )
 %
 % See also FRED.
 
-% Copyright 2014 by The University of Oxford and The Chebfun2 Developers.
+% Copyright 2015 by The University of Oxford and The Chebfun2 Developers.
 % See http://www.chebfun.org/ for Chebfun2 information.
 
 if ( ~isa( K, 'chebfun2' ) )
@@ -36,7 +36,7 @@ if ( ~domainCheck(cols, v) )
         'Domain of CHEBFUN and CHEBFUN2 kernel do not match.');
 end
 
-RR = D * rows;
+RR = rows * D;
 
 % Cumsum with cols and v:  (This can be sped up.)
 f = chebfun( 0, dom(1:2) );

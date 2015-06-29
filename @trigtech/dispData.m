@@ -3,10 +3,10 @@ function data = dispData(f)
 %   DATA = DISPDATA(F) extracts useful information from the given TRIGTECH F and
 %   the information DATA will be used by DISPLAY at higher levels.
 
-% Copyright 2014 by The University of Oxford and The Chebfun Developers.
+% Copyright 2015 by The University of Oxford and The Chebfun Developers.
 % See http://www.chebfun.org/ for Chebfun information.
 
-data{1}.name = 'periodic';
+data{1}.name = 'trig';
 data{1}.data = [];
 
 end

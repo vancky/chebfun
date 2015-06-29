@@ -52,7 +52,7 @@ function outPref = techPref(inPref)
 %
 % See also CHEBTECH, CHEBTECH1, CHEBTECH2
 
-% Copyright 2014 by The University of Oxford and The Chebfun Developers.
+% Copyright 2015 by The University of Oxford and The Chebfun Developers.
 % See http://www.chebfun.org/ for Chebfun information.
 
 outPref.eps                = 2^-52;
@@ -65,6 +65,15 @@ outPref.refinementFunction = 'nested';
 outPref.happinessCheck     = 'classic';
 
 if ( nargin == 1 )
+    validPrefs = fieldnames(outPref);
+    for ( givenPref = fieldnames(inPref).');
+        givenPref = givenPref{1};
+        if ( ~any(strcmp(givenPref, validPrefs)) )
+            warning('CHEBFUN:CHEBTECH:techPref:unknownPref', ...
+                ['Unrecognized input preference ''' givenPref '''.']);
+        end
+    end
+
     outPref = chebfunpref.mergeTechPrefs(outPref, inPref);
 end
 

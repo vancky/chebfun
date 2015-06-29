@@ -1,4 +1,4 @@
-function [u, info] = solvebvp(N, rhs, varargin)
+function varargout = solvebvp(N, rhs, varargin)
 %SOLVEBVP   Solve a linear or nonlinear CHEBOP BVP system.
 %
 %   U = SOLVEBVP(N, RHS), where N is a CHEBOP and RHS is a CHEBMATRIX, CHEBFUN
@@ -6,8 +6,13 @@ function [u, info] = solvebvp(N, rhs, varargin)
 %
 %       N(U) = RHS + boundary conditions specified by N
 %
-%   Observe that U = SOLVEBVP(N, RHS) has the same effect as U = N\RHS, but this
-%   method allows greater flexibility than CHEBOP backslash, as described below.
+%   Observe that U = SOLVEBVP(N, RHS), where N specifies a boundary-value
+%   problem (BVP), has the same effect as U = N\RHS, but this method allows
+%   greater flexibility than CHEBOP backslash, as described below. Problems are
+%   determined to be a BVP as follows:
+%       * Both N.LBC and N.RBC is non-empty, or N.BC is non-empty.
+%   Otherwise, problems are considered to be initial/final-value problems, and
+%   U=N\RHS will in general have the same effect as U = SOLVEIVP(N, RHS).
 %
 %   If successful, the solution returned, U, is a CHEBFUN if N specifies a
 %   scalar problem, and a CHEBMATRIX if N specifies a coupled systems of
@@ -48,9 +53,9 @@ function [u, info] = solvebvp(N, rhs, varargin)
 %       uv = solvebvp(N, [0; 0]);
 %
 % See also: CHEBOP, CHEBOP/MLDIVIDE, CHEBOPPREF, CHEBOP/SOLVEBVPLINEAR,
-%   CHEBOP/SOLVEBVPNONLINEAR, LINOP/MLDIVIDE.
+%   CHEBOP/SOLVEBVPNONLINEAR, CHEBOP/SOLVEIVP, LINOP/MLDIVIDE.
 
-% Copyright 2014 by The University of Oxford and The Chebfun Developers.
+% Copyright 2015 by The University of Oxford and The Chebfun Developers.
 % See http://www.chebfun.org/ for Chebfun information.
 
 % Developer note:
@@ -95,17 +100,12 @@ x = chebfun(@(x) x, dom);
 % Linearize and attach preferences.
 [L, residual, isLinear] = linearize(N, u0, x);
 
-% Determine the discretization.
-pref = determineDiscretization(N, L, isPrefGiven, pref);
-
-% Clear boundary conditions if the dicretization uses periodic functions (since
-% if we're using periodic basis functions, the boundary conditions will be
-% satisfied by construction).
-disc = pref.discretization();
-tech = disc.returnTech();
-techUsed = tech();
-if ( isPeriodicTech(techUsed) )
-    [N, L] = clearPeriodicBCs(N, L);
+% Before attempting to solve, check whether we actually have any BCs imposed:
+maxDiffOrder = max(max(L.diffOrder));
+if maxDiffOrder > 0 && isempty(N.lbc) && isempty(N.rbc) && isempty(N.bc)
+    % Differential equations need BCs (but integral eqns. are OK):
+    error('CHEBFUN:CHEBOP:solvebvp:bcEmpty', ...
+        'Boundary conditions must be provided.');
 end
 
 warnState = warning();
@@ -160,14 +160,29 @@ if ( isnumeric(u0) )
     u0 = u0 + 0*residual;
 end
 
-% Ensure that u0 is of correct discretization, and convert it to a
-% CHEBMATRIX if necessary.
-if ( isa(u0, 'chebfun') )
-    u0 = chebmatrix(chebfun.convertToCorrectTech(u0, dom, tech));
-elseif ( isa(u0, 'chebmatrix') )
-    u0 = chebmatrix.convertToCorrectTech(u0, dom, tech);
+% Determine the discretization.
+pref = determineDiscretization(N, L, isPrefGiven, pref);
+disc = pref.discretization();
+
+% Determine the TECH used by the discretization.
+tech = disc.returnTech();
+techUsed = tech();
+
+% If the dicretization uses periodic functions, then clear the boundary
+% conditions (if we're using periodic basis functions, the boundary conditions
+% will be satisfied by construction). Also, ensure that u0 is of correct
+% discretization, and convert it to a CHEBMATRIX if necessary.
+if ( isPeriodicTech(techUsed) )
+    % Clear the boundary conditions.
+    [N, L] = clearPeriodicBCs(N, L);
+    % Do the conversion.
+    if ( isa(u0, 'chebfun') )
+        u0 = chebmatrix(changeTech(u0, tech));
+    elseif ( isa(u0, 'chebmatrix') )
+        u0 = changeTech(u0, tech);
+    end
 end
-    
+
 % Solve:
 if ( all(isLinear) )
     % Ensure that rhs-residual is of correct discretization, and convert it to a 
@@ -203,14 +218,16 @@ else
         [L, residual, isLinear, u0] = linearize(N, u0, x);
     end
     
-    % Ensure that rhs is of correct discretization, and convert it to a 
-    % CHEBMATRIX if necessary.
-    if ( isa(rhs, 'chebfun') )
-        rhs = chebmatrix(chebfun.convertToCorrectTech(rhs, dom, tech));
-    elseif ( isa(rhs, 'chebmatrix') )
-        rhs = chebmatrix.convertToCorrectTech(rhs, dom, tech);
+    % If using a periodic TECH, ensure that rhs is of correct 
+    % discretization, and convert it to a CHEBMATRIX if necessary.
+    if ( isPeriodicTech(techUsed) )
+        if ( isa(rhs, 'chebfun') )
+            rhs = chebmatrix(changeTech(rhs, tech));
+        elseif ( isa(rhs, 'chebmatrix') )
+          rhs = changeTech(rhs, tech);
+        end
     end
-    
+
     % Call solver method for nonlinear problems.
     [u, info] = solvebvpNonlinear(N, rhs, L, u0, residual, pref, displayInfo);
     
@@ -219,16 +236,26 @@ end
 % Revert warning state:
 warning(warnState);
 
-% Return a CHEBFUN rather than a CHEBMATRIX for scalar problems:
-if ( all(size(u) == [1 1]) )
-    u = u{1};
-end
-
-% Simplify the result:
-u = simplify(u);
 
 % Return the linearity information as well:
 info.isLinear = isLinear;
+
+% Return a CHEBFUN rather than a CHEBMATRIX for scalar problems:
+if ( all(size(u) == [1 1]) )
+    varargout{1} = u{1};
+    varargout{2} = info;
+elseif ( nargout == 1 )
+    varargout{1} = u;
+elseif ( nargout == size(u, 1) )
+    [varargout{1:nargout}] = deal(u);
+elseif ( nargout == size(u, 1) + 1 )
+    [varargout{1:nargout - 1}] = deal(u);
+    varargout{nargout} = info;
+else
+    error('CHEBFUN:CHEBOP:solvebvp:numberOfOutputs', ...
+        'Incorrect number of outputs.');
+end
+
 
 end
 
