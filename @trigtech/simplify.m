@@ -69,8 +69,8 @@ idn = bsxfun(@minus, abs(cn), tol.*f.vscale) > 0;
 % [ignored, firstNonZeroRowN] = find(cn.' ~= 0, 1);
 
 % Check for trailing small coefficients:
-[ignored, lastNonZeroRowP] = find(idp.' == 1, 1, 'last');
-[ignored, lastNonZeroRowN] = find(idn.' == 1, 1, 'last');
+[~, lastNonZeroRowP] = find(idp.' == 1, 1, 'last');
+[~, lastNonZeroRowN] = find(idn.' == 1, 1, 'last');
 
 % If the whole thing's now zero, leave just one coefficient:
 if ( isempty(lastNonZeroRowP) && isempty(lastNonZeroRowN) )

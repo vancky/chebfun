@@ -69,8 +69,8 @@ elseif ( isa(f, 'trigtech') && isa(g, 'trigtech') )  % TRIGTECH + TRIGTECH.
     end
     
     % Update values and coefficients:
-    f.values = f.values + g.values;
-    f.coeffs = f.vals2coeffs(f.values);
+    f.coeffs = f.coeffs + g.coeffs;
+    f.values = f.coeffs2vals(f.coeffs);
 
     % Update isReal:
     f.isReal = f.isReal & g.isReal;

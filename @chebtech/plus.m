@@ -18,8 +18,6 @@ elseif ( isa(g, 'double') ) % CHEBTECH + double
     
     % Store the vscale:
     oldVscl = f.vscale; 
-    % Update values (use bsxfun() to handle the case in which g is a vector
-    % and f is an array-valued CHEBTECH):
     % Update coeffs:
     if ( (size(g, 2) > 1) && (size(f.coeffs, 2) == 1) )
         % Perform singleton expansion of f:

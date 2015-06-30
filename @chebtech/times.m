@@ -102,8 +102,8 @@ function [coeffs, pos] = coeff_times_main(f, g)
 [gn, gm] = size(g);
 
 % Prolong:
-f((fn+1):(fn+gn+1),:) = 0;
-g((gn+1):(fn+gn+1),:) = 0;
+f((fn+1):(fn+gn-1),:) = 0;
+g((gn+1):(fn+gn-1),:) = 0;
 
 % Check dimensions:
 if ( fm ~= gm )
@@ -130,7 +130,7 @@ if ( all(f == g) )
         pos = true;
     end
 elseif ( all( conj(f) == g ) )
-    coeffs = coeff_times( conj(f), g );
+    coeffs = coeff_times( f, g );
     pos = true;
 else
     coeffs = coeff_times( f, g );

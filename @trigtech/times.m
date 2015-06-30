@@ -26,8 +26,8 @@ elseif ( isa(g, 'double') )     % TRIGTECH .* double.
     
     % Do the multiplication:
     if ( size(g, 2) > 1 )
-        f.values = bsxfun(@times, f.values, g);
-        f.coeffs = f.vals2coeffs(f.values);
+        f.coeffs = bsxfun(@times, f.coeffs, g);
+        f.values = f.coeffs2vals(f.coeffs);
         f.vscale = f.vscale.*abs(g);
     else
         f.values = f.values*g;
@@ -48,62 +48,21 @@ elseif ( ~isa(f, 'trigtech') || ~isa(g, 'trigtech') )
 elseif ( size(f.values, 1) == 1 )
     % If we have (constant TRIGTECH).*TRIGTECH, reverse the order and call TIMES
     % again:
-    f = times(g, f.values);
+    f = times(g, f.coeffs);
     f.epslevel = max(f.epslevel, g.epslevel);
     return
     
 elseif ( size(g.values, 1) == 1)
     % If we have TRIGTECH.*(constant TRIGTECH), convert the (constant TRIGTECH)
     % to a scalar and call TIMES again:
-    f = times(f, g.values); 
+    f = times(f, g.coeffs); 
     f.epslevel = max(f.epslevel, g.epslevel);
     return
 end
 
-% Get the size of each TRIGTECH:
-[fn, fm] = size(f.values);
-[gn, gm] = size(g.values);
-
-% The length of the product is known:
-fNew = prolong(f, fn + gn - 1); 
-
-% Check dimensions:
-if ( fm ~= gm )
-    if ( fm == 1 )
-        % Allow [Inf x 1] .* [Inf x m].
-        fNew.values = repmat(fNew.values, 1, gm);
-        fNew.coeffs = repmat(fNew.coeffs, 1, gm);
-    elseif ( gm == 1 )
-        % Allow [Inf x m] .* [Inf x 1].
-        g.values = repmat(g.values, 1, fm);
-        g.coeffs = repmat(g.coeffs, 1, fm);
-    else
-        error('CHEBFUN:TRIGTECH:times:dim2', ...
-            'Inner matrix dimensions must agree.');
-    end
-end
-
-% Check for two cases where the output is known in advance to be positive,
-% namely F == conj(G) or F == G and isreal(F).
-pos = false;
-
-% Multiply values:
-if ( isequal(f, g) )
-   values = fNew.values.^2;          
-   if ( isreal(f) )
-       pos = true; 
-   end
-elseif ( isequal(conj(f), g) )
-   values = conj(fNew.values).*fNew.values;
-   pos = true;
-else
-   gNew = prolong(g, fn + gn - 1); 
-   values = fNew.values.*gNew.values;
-end
-
-% Assign values and coefficients back to f:
-f.values = values;
-f.coeffs = f.vals2coeffs(values);
+% Do muliplication in coefficient space:
+[f.coeffs, pos] = coeff_times_main(f.coeffs, g.coeffs);
+f.values = f.coeffs2vals(f.coeffs);
 
 % Update vscale, epslevel, and ishappy:
 vscale = max(abs(f.values), [], 1);
@@ -135,5 +94,78 @@ end
 
 % If f and g are real then make the result real.
 f.values(:,f.isReal) = real(f.values(:,f.isReal));
+
+end
+
+function [coeffs, pos] = coeff_times_main(f, g)
+
+% Get the size of each TRIGTECH:
+[fn, fm] = size(f);
+[gn, gm] = size(g);
+
+% Prolong:
+f((fn+1):(fn+gn-1),:) = 0;
+g((gn+1):(fn+gn-1),:) = 0;
+
+% Check dimensions:
+if ( fm ~= gm )
+    if ( fm == 1 )
+        % Allow [Inf x 1] .* [Inf x m].
+        f = repmat(f, 1, gm);
+    elseif ( gm == 1 )
+        % Allow [Inf x m] .* [Inf x 1].
+        g = repmat(g, 1, fm);
+    else
+        error('CHEBFUN:TRIGTECH:times:dim2', ...
+            'Inner matrix dimensions must agree.');
+    end
+end
+
+% Check for two cases where the output is known in advance to be positive,
+% namely F == conj(G) or F == G and isreal(F).
+pos = false;
+
+% Multiply coefficients:
+if ( isequal(f, g) )
+   coeffs = coeff_times(f, g);          
+   if ( isreal(f) )
+       pos = true; 
+   end
+elseif ( isequal(conj(f), g) )
+   coeffs = coeff_times(f, g);
+   pos = true;
+else
+   if fn > gn
+       coeffs = coeff_times(f, g);
+   else
+       coeffs = coeff_times(g, f);
+   end
+end
+
+end
+
+function hc = coeff_times(fc, gc)
+%COEFF_TIMES(FC, GC)   Multiplication in coefficient space.
+%   HC = COEFF_TIMES(FC, GC) returns the vector of Fourier coefficients, HC,
+%   resulting from the multiplication of two functions with FC and GC
+%   coefficients. The vectors have already been prolonged.
+
+N = length(fc);
+M = length(gc);
+gc = gc(1:M,:);
+multmat = trigspec.multmat(N+M-1,fc);
+multmat = multmat(:,1:M);
+hc = multmat*gc;    
+
+%hc = ifft(fft(fc).*fft(gc));
+
+% mn = length(fc);
+% t = [2*fc(1,:) ; fc(2:end,:)];                    % Toeplitz vector.
+% x = [2*gc(1,:) ; gc(2:end,:)];                    % Embed in Circulant.
+% xprime = fft([x ; x(end:-1:2,:)]);                % FFT for Circulant mult.
+% aprime = fft([t ; t(end:-1:2,:)]);
+% Tfg = ifft(aprime.*xprime);                   % Diag in function space.
+% hc = .25*[Tfg(1,:); Tfg(2:end,:) + Tfg(end:-1:2,:)];% Extract out result.
+% hc = hc(1:mn,:);  
 
 end
