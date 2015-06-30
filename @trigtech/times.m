@@ -135,11 +135,7 @@ elseif ( isequal(conj(f), g) )
    coeffs = coeff_times(f, g);
    pos = true;
 else
-   if fn > gn
-       coeffs = coeff_times(f, g);
-   else
-       coeffs = coeff_times(g, f);
-   end
+   coeffs = coeff_times(f, g);
 end
 
 end
@@ -150,22 +146,11 @@ function hc = coeff_times(fc, gc)
 %   resulting from the multiplication of two functions with FC and GC
 %   coefficients. The vectors have already been prolonged.
 
-N = length(fc);
-M = length(gc);
-gc = gc(1:M,:);
-multmat = trigspec.multmat(N+M-1,fc);
-multmat = multmat(:,1:M);
-hc = multmat*gc;    
-
-%hc = ifft(fft(fc).*fft(gc));
-
-% mn = length(fc);
-% t = [2*fc(1,:) ; fc(2:end,:)];                    % Toeplitz vector.
-% x = [2*gc(1,:) ; gc(2:end,:)];                    % Embed in Circulant.
-% xprime = fft([x ; x(end:-1:2,:)]);                % FFT for Circulant mult.
-% aprime = fft([t ; t(end:-1:2,:)]);
-% Tfg = ifft(aprime.*xprime);                   % Diag in function space.
-% hc = .25*[Tfg(1,:); Tfg(2:end,:) + Tfg(end:-1:2,:)];% Extract out result.
-% hc = hc(1:mn,:);  
+% The multiplication of two TRIGTECHS can be computed, in coefficients space,
+% via the multplication by a (convolution) TOEPLITZ matrix. This multiplication
+% can be computed via the FFT. Note that it's not the same as converting 
+% the coefficients back to values (IFFT), multiply the values and go back to
+% coefficients space (FFT).
+hc = ifft(fft(fc).*fft(gc)); 
 
 end
