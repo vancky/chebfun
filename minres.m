@@ -21,6 +21,8 @@ if res == 0, return, end
 
 % Initialize H 
 H = [];
+D = [];
+S = [];
 
 % Iteration loop
 for ii = 1:maxits
@@ -44,8 +46,15 @@ for ii = 1:maxits
   % update H
   H(1:ii+1,ii) = [d1+d2;s1];
 
+  % update S and D
+  D = [D;H(ii,ii)];
+  S = [S;H(ii+1,ii)];
+
+  % construct T
+  T = spdiags([S,D,[0;S(1:end-1)]],-1:1,ii+1,ii);
+
   % solve least squares problem
-  u = Q*(H\[res(1);zeros(ii,1)]);
+  u = Q*(T\[res(1);zeros(ii,1)]);
 
   % compute residual
   res = [res;norm(f-L(u))];
