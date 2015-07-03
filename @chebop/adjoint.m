@@ -1,10 +1,10 @@
 function [N, adjcoeffs] = adjoint(N)
 %ADJOINT   Compute the adjoint of a linear CHEBOP.
-%   N = ADJOINT(N), where N is a CHEBOP, returns the ajoint CHEBOP of N.
+%   N = ADJOINT(N), where N is a CHEBOP, returns the adjoint CHEBOP of N.
 %
-%   [N, coeffs] = ADJOINT(N) also returns a CHEBMATRIX COEFFS which stores the
-%   (variables) coefficients of the adjoint. The indexation is as follows:
-%         N = coeffs{1}*u^(n) + coeffs{2}*u^(n-1) + ... + coeffs{n+1}*u
+%   [N, adjcoeffs] = ADJOINT(N) also returns a CHEBMATRIX ADJCOEFFS which stores 
+%   the (variables) coefficients of the adjoint. The indexation is as follows:
+%      N = adjcoeffs{1}*u^(n) + adjcoeffs{2}*u^(n-1) + ... + adjcoeffs{n+1}*u
 %
 % See also LINOP/ADJOINT.
 
@@ -23,9 +23,12 @@ assert(all(isLinear), 'CHEBFUN:CHEBOP:adjoint:nonlinear', ...
     ['The input operator appears to be nonlinear.\n', ...
     'ADJOINT supports only linear CHEBOP instances.']);
 
+% Get the value of the highest derivative:
+n = L.diffOrder;
+
 % ADJOINT is supported only for periodic boundary conditions for the moment.
 % [TODO]: Support non-periodic boundary conditions.
-if ( ~isa(N.bc, 'char') || ~strcmpi(N.bc,'periodic') ) 
+if ( ( ~isa(N.bc, 'char') || ~strcmpi(N.bc,'periodic') ) && ( n > 0 ) ) 
     error('CHEBFUN:CHEBOP:adjoint:nonperiodic', ...
         'ADJOINT only supports periodic boundary conditions for the moment.');
 end
@@ -40,13 +43,20 @@ if ( max(size(blocks,2)) > 1 )
         'ADJOINT doesn''t support system of equations for the moment.');
 end
 
-% Get the first block and the value of the highest derivative:
+% Get the first block and the domain:
 block = blocks{1};
-n = L.diffOrder;
 dom = L.domain;
 
 % Get the coefficients:
-coeffs = toCoeff(block);
+if ( n == 0 )
+    % This is a multiplication operator, nothing to do here:
+    if ( nargout > 1 )
+        adjcoeffs = block;
+    end
+    return
+else
+    coeffs = toCoeff(block);
+end
 
 % Compute the coefficients of the adjoint:
 adjcoeffs = cell(n+1,1);
@@ -64,7 +74,7 @@ end
 N = chebop(@(x, u) coeffs2func(u, adjcoeffs), dom);
 N.bc = 'periodic';
 
-if nargout > 1
+if ( nargout > 1 )
     % Store the coefficients in a CHEBMATRIX:
     adjcoeffs = chebmatrix(adjcoeffs);
 end
