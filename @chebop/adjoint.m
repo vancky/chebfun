@@ -1,4 +1,4 @@
-function [N, newcoeffs] = adjoint(N)
+function N = adjoint(N)
 %ADJOINT   Compute the adjoint of a linear CHEBOP.
 
 % See also LINOP/ADJOINT.
@@ -18,7 +18,7 @@ assert(all(isLinear), 'CHEBFUN:CHEBOP:adjoint:nonlinear', ...
     ['The input operator appears to be nonlinear.\n', ...
     'ADJOINT supports only linear CHEBOP instances.']);
 
-% ADJOINT is supported only for periodic boundary conditions for the moment:
+% ADJOINT is supported only for periodic boundary conditions for the moment.
 % [TODO]: Support non-periodic boundary conditions.
 if ( ~isa(N.bc, 'char') || ~strcmpi(N.bc,'periodic') ) 
     error('CHEBFUN:CHEBOP:adjoint:nonperiodic', ...
@@ -40,8 +40,10 @@ block = blocks{1};
 n = L.diffOrder;
 dom = L.domain;
 
-% Get the varialbes coefficients:
+% Get the coefficients:
 coeffs = toCoeff(block);
+
+% Compute the coefficients of the adjoint:
 newcoeffs = cell(n+1,1);
 for k = 0:n
     newcoeffs{k+1} = chebfun('0', dom);
