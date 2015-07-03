@@ -1,6 +1,11 @@
-function N = adjoint(N)
+function [N, adjcoeffs] = adjoint(N)
 %ADJOINT   Compute the adjoint of a linear CHEBOP.
-
+%   N = ADJOINT(N), where N is a CHEBOP, returns the ajoint CHEBOP of N.
+%
+%   [N, coeffs] = ADJOINT(N) also returns a CHEBMATRIX COEFFS which stores the
+%   (variables) coefficients of the adjoint. The indexation is as follows:
+%         N = coeffs{1}*u^(n) + coeffs{2}*u^(n-1) + ... + coeffs{n+1}*u
+%
 % See also LINOP/ADJOINT.
 
 % Copyright 2015 by The University of Oxford and The Chebfun Developers. 
@@ -44,20 +49,25 @@ dom = L.domain;
 coeffs = toCoeff(block);
 
 % Compute the coefficients of the adjoint:
-newcoeffs = cell(n+1,1);
+adjcoeffs = cell(n+1,1);
 for k = 0:n
-    newcoeffs{k+1} = chebfun('0', dom);
+    adjcoeffs{k+1} = chebfun('0', dom);
 end
 for k = 0:n
     for l = 0:k
-        newcoeffs{n+1-l} = newcoeffs{n+1-l} + ...
+        adjcoeffs{n+1-l} = adjcoeffs{n+1-l} + ...
             (-1)^k*nchoosek(k,l)*diff(coeffs{n+1-k}, k-l);
     end
 end
 
 % Construct a CHEBOP from these new coefficients:
-N = chebop(@(x, u) coeffs2func(u, newcoeffs), dom);
+N = chebop(@(x, u) coeffs2func(u, adjcoeffs), dom);
 N.bc = 'periodic';
+
+if nargout > 1
+    % Store the coefficients in a CHEBMATRIX:
+    adjcoeffs = chebmatrix(adjcoeffs);
+end
 
 end
 
