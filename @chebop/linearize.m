@@ -196,21 +196,21 @@ L.domain = domain.merge(L.domain, dom);
 % u0 contains doubles for the parameter entries. If not, we correct for this
 % below by assuming that any variable that does not have a diffOrder greater
 % than 0 associated with it is a parameter, rather than a function.
-isParam = all(L.isNotDiffOrInt, 1);
-% If we have any parameters involved that are still thought to be functions, and
-% we did not get a U passed in to linearize around, we reseed the corresponding
-% variables.
-if ( all(isFun) && any(isParam) && paramReshapeFlag )
-    % We've found a parameterised problem, but weren't informed by u0.  Reseed
-    % the final numParam variables as constants and linearize again:
-    u = cellfun(@(b) b.func, u, 'UniformOutput', false);
-    for k = find(isParam)
-        u{k} = feval(u{k}, L.domain(1)); % Convert to a scalar.
-    end
-    [L, res, isLinear, u] = linearize(N, u, x, linCheckFlag);
-
-    return
-end
+% isParam = all(L.isNotDiffOrInt, 1);
+% % If we have any parameters involved that are still thought to be functions, and
+% % we did not get a U passed in to linearize around, we reseed the corresponding
+% % variables.
+% if ( all(isFun) && any(isParam) && paramReshapeFlag )
+%     % We've found a parameterised problem, but weren't informed by u0.  Reseed
+%     % the final numParam variables as constants and linearize again:
+%     u = cellfun(@(b) b.func, u, 'UniformOutput', false);
+%     for k = find(isParam)
+%         u{k} = feval(u{k}, L.domain(1)); % Convert to a scalar.
+%     end
+%     [L, res, isLinear, u] = linearize(N, u, x, linCheckFlag);
+% 
+%     return
+% end
 
 %% Add BCs.
 

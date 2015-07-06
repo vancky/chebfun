@@ -58,4 +58,32 @@ f = chebfun(@(x) sin(cos(10*x)) + exp(sin(cos(x))), dom, 'trig');
 Nstarex = chebop(@(x,u) diff(a2.*u, 2) - diff(a1.*u) + a0.*u, dom);
 pass(7) = norm(Nstarex*f - Nstar*f, inf) < tol;
 
+%% Second-order and complex:
+
+% Construct an operator N = a_2(x)*u'' + a_1(x)u' + a_0(x)u:
+dom = [0 2*pi];
+a2 = chebfun(@(x) 1i + cos(4*x), dom, 'trig');
+a1 = chebfun(@(x) 2 + 1i*cos(cos(2*x)), dom, 'trig');
+a0 = chebfun(@(x) .5 + 1i*exp(sin(x)), dom, 'trig');
+N = chebop(dom);
+N.op = @(x,u) a2.*diff(u,2) + a1.*diff(u) + a0.*u;
+N.bc = 'periodic';
+
+% Compute the adjoint:
+[Nstar, adjcoeffs] = adjoint(N);
+
+% The exact adjoint is N* = (conj(a_2(x))u)'' - (conj(a_1(x))u)' + conj(a_0(x))u
+% Let's compare the coefficients:
+pass(8) = norm(adjcoeffs{1} - conj(a2)) < tol;
+pass(9) = norm(adjcoeffs{2} - (2*diff(conj(a2)) - conj(a1))) < tol;
+pass(10) = norm(adjcoeffs{3} - (conj(a0) - diff(conj(a1)) + ...
+    diff(conj(a2), 2))) < tol;
+
+% Let's contruct the exact adjoint, and compare the evaluation against a 
+% function:
+f = chebfun(@(x) sin(cos(10*x)) + exp(sin(cos(x))), dom, 'trig');
+Nstarex = chebop(@(x,u) diff(conj(a2).*u, 2) - diff(conj(a1).*u) + ...
+    conj(a0).*u, dom);
+pass(11) = norm(Nstarex*f - Nstar*f, inf) < tol;
+
 end

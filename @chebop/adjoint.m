@@ -66,7 +66,7 @@ end
 for k = 0:n
     for l = 0:k
         adjcoeffs{n+1-l} = adjcoeffs{n+1-l} + ...
-            (-1)^k*nchoosek(k,l)*diff(coeffs{n+1-k}, k-l);
+            (-1)^k*nchoosek(k,l)*conj(diff(coeffs{n+1-k}, k-l));
     end
 end
 
