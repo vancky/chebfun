@@ -533,6 +533,9 @@ classdef chebfun
         
         % Discrete sine transform:
         y = dst(u, kind);
+        
+        % Discrete time Fourier transform:
+        X = dtft(x);
 
         % FIRPM filter design:
         varargout = firpm(n, freqs, f);
