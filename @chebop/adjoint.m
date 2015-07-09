@@ -51,7 +51,7 @@ dom = L.domain;
 if ( n == 0 )
     % This is a multiplication operator, nothing to do here:
     if ( nargout > 1 )
-        adjcoeffs = block;
+        adjcoeffs = conj(block);
     end
     return
 else
