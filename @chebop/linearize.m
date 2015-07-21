@@ -269,7 +269,11 @@ if ( ~isempty(N.bc) )
             % we're collapsing are either zeros or identity, so identical over
             % the whole domain
             E = functionalBlock.feval(dom(1), dom);
-            for paramCounter = find(~isFun)
+            params = find(~isFun);
+            % Ensure params is a row vector. This was causing a bug in 2014b and
+            % later versions, cf. #1566
+            params = params(:)';
+            for paramCounter = params
                 u{paramCounter}.jacobian = E*u{paramCounter}.jacobian;
             end
         end
