@@ -7,7 +7,7 @@ if ( nargin == 0 )
 end
 
 tolVals = 1e-10;
-tolFuns = 1e-7;
+tolFuns =1e-6;
 %% With linops
 d = domain(0, pi);
 L = -diff(d, 2);
