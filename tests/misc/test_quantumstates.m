@@ -1,4 +1,4 @@
-function pass = test_quantumstates(pref)
+% function pass = test_quantumstates(pref)
 % Test function for the CHEBFUN method quantumstates().
 % AB, 2014/05/08.
 
@@ -33,4 +33,9 @@ op = @(u) -h^2*diff(u,2) + repmat(V, 1, n).*u;
 % Did quantumstates() return eigenfunctions and eigenvalues?
 err = norm( op(efuns) - efuns*evals );
 pass(2) = err < 5e-8;
-end
+% end
+
+%%
+clc
+-h^2*diff(efuns,2)
+repmat(V,1,n).*efuns

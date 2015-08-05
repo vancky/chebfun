@@ -25,27 +25,36 @@ if ( nargin < 4 )
 end
 hscl = f.hscale;
 
+checker = pref.happinessCheck;
+
 % What does happiness mean to you?
-if ( strcmpi(pref.happinessCheck, 'classic') )
+if ( strcmpi(checker, 'standard') )
+    % Use the 'standard' happiness check:
+    
+    % Check the coefficients are happy:
+    [ishappy, epslevel, cutoff] = standardCheck(f, values, vscl, hscl, pref);
+
+elseif ( strcmpi(checker, 'classic') )
     % Use the default happiness check procedure from Chebfun V4.
     
     % Check the coefficients are happy:
     [ishappy, epslevel, cutoff] = classicCheck(f, values, vscl, hscl, pref);
     
-elseif ( strcmpi(pref.happinessCheck, 'plateau') )
+elseif ( strcmpi(checker, 'plateau') )
     % Use the 'plateau' happiness check:
     [ishappy, epslevel, cutoff] = plateauCheck(f, values, vscl, hscl, pref);
 
-elseif ( strcmpi(pref.happinessCheck, 'strict') )
-    error('CHEBFUN:TRIGTECH:happinessCheck:strictCheck','Strict check not implemented for TRIGTECH.  Please use classic check.');
+elseif ( strcmpi(checker, 'strict') )
+    error('CHEBFUN:TRIGTECH:happinessCheck:strictCheck',...
+          'Strict check not implemented for TRIGTECH.  Please use standard check.');
     
 elseif ( strcmpi(pref.happinessCheck, 'loose') )
-    error('CHEBFUN:TRIGTECH:happinessCheck:looseCheck','Loose check not implemented for TRIGTECH.  Please use classic check.');
+    error('CHEBFUN:TRIGTECH:happinessCheck:looseCheck',...
+           'Loose check not implemented for TRIGTECH.  Please use standard check.');
     
 else
     % Call a user-defined happiness check:
-    [ishappy, epslevel, cutoff] = ...
-        pref.happinessCheck(f, values, vscl, hscl,  pref);
+    [ishappy, epslevel, cutoff] = checker(f, values, vscl, hscl, pref);
     
 end
 
