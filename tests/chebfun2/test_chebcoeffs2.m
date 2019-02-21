@@ -5,7 +5,7 @@ if ( nargin == 0)
     pref = chebfunpref; 
 end
 
-tol = 1000*pref.eps; 
+tol = 1000*pref.cheb2Prefs.chebfun2eps;
 j = 1; 
 
 % Rank-2 function
@@ -22,5 +22,8 @@ pass(j) = norm( X - Exact ) < tol; j = j + 1;
 % check inverses
 Z = chebfun2.vals2coeffs( chebpolyval2( f ) );
 pass(j) = norm( Z - Exact ) < tol; j = j + 1; 
+
+f = chebfun2( @(x,y) x + y );
+pass(j) = isequal( size(coeffs2(f,2,1)), [2 1] ); j = j + 1;
 
 end

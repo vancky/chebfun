@@ -31,7 +31,7 @@ pass(3:4) = test_mult_function_by_scalar(f1, f1_op, alpha, x);
 % Test use of mtimes() to compute products.
 f = chebfun({@(x) sin(2*pi*x), @(x) cos(2*pi*x)}, [-1 0 1]);
 g = chebfun({@(x) exp(2*pi*1i*x), @(x) cos(2*pi*x)}, [-1 0 1]);
-tol = 10*max(f.vscale*f.epslevel, g.vscale*g.epslevel);
+tol = 10*max(vscale(f)*eps, vscale(g)*eps);
 pass(5) = abs(g.'*f - (0.5 + 0.5i)) < tol;
 
 %% ARRAY-VALUED
@@ -46,19 +46,19 @@ f = chebfun({@(x) [sin(2*pi*x) sin(2*pi*x)], ...
 g = chebfun({@(x) [sin(4*pi*x) sin(4*pi*x)], ...
     @(x) [cos(2*pi*x) cos(4*pi*x)]}, [-1 0 1]);
 err = g.'*f - [0.5 0; 0 0.5];
-tol = 10*max(f.vscale*f.epslevel, g.vscale*g.epslevel);
+tol = 10*max(vscale(f)*eps, vscale(g)*eps);
 pass(8) = norm(err(:), inf) < tol;
 
 A = randn(2, 2);
 g = f2*A;
 g_exact = @(x) [sin(x).*abs(x - 0.1)  exp(x)]*A;
 err = abs(feval(g, x) - g_exact(x));
-pass(9) = max(err(:)) < 10*vscale(g)*epslevel(g);
+pass(9) = max(err(:)) < 10*vscale(g)*eps;
 
 h = A*f2.';
 h_exact = @(x) A*[sin(x).*abs(x - 0.1)  exp(x)].';
 err = abs(feval(h, x) - h_exact(x));
-pass(10) = max(err(:)) < 10*vscale(h)*epslevel(h);
+pass(10) = max(err(:)) < 10*vscale(h)*eps;
 
 %% QUASIMATRIX
 
@@ -75,25 +75,25 @@ fq = quasimatrix(f);
 gq = quasimatrix(g);
 
 err = gq.'*f - [0.5 0; 0 0.5];
-tol = 10*max(vscale(f)*epslevel(f), vscale(g)*epslevel(g));
+tol = 10*max(vscale(f)*eps, vscale(g)*eps);
 pass(13) = norm(err(:), inf) < tol;
 err = g.'*fq - [0.5 0; 0 0.5];
-tol = 10*max(vscale(f)*epslevel(f), vscale(g)*epslevel(g));
+tol = 10*max(vscale(f)*eps, vscale(g)*eps);
 pass(14) = norm(err(:), inf) < tol;
 err = gq.'*fq - [0.5 0; 0 0.5];
-tol = 10*max(vscale(f)*epslevel(f), vscale(g)*epslevel(g));
+tol = 10*max(vscale(f)*eps, vscale(g)*eps);
 pass(15) = norm(err(:), inf) < tol;
 
 A = randn(2, 2);
 g = f2q*A;
 g_exact = @(x) f2_op(x)*A;
 err = abs(feval(g, x) - g_exact(x));
-pass(16) = max(err(:)) < 10*vscale(g)*epslevel(g);
+pass(16) = max(err(:)) < 10*vscale(g)*eps;
 
 h = A*f2q.';
 h_exact = @(x) A*[sin(x).*abs(x - 0.1)  exp(x)].';
 err = abs(feval(h, x) - h_exact(x));
-pass(17) = max(err(:)) < 10*vscale(h)*epslevel(h);
+pass(17) = max(err(:)) < 10*vscale(h)*eps;
 
 %% Test error conditions.
 try
@@ -105,16 +105,16 @@ end
 
 try
     h = f*f1;
-    pass(19) = false;
+    pass(19) = true;
 catch ME
-    pass(19) = strcmp(ME.identifier, 'CHEBFUN:CHEBFUN:mtimes:dims');
+    pass(19) = strcmp(ME.identifier, 'CHEBFUN:CHEBFUN:dimCheck:dim');
 end
 
 try
     h = f*g;
-    pass(20) = false;
+    pass(20) = true;
 catch ME
-    pass(20) = strcmp(ME.identifier, 'CHEBFUN:CHEBFUN:mtimes:dims');
+    pass(20) = false;
 end
 
 %% Test on SINGFUN - multiplication by scalar:
@@ -125,7 +125,7 @@ h_op = @(x) 3*sin(20*x)./((x+1).^0.5);
 h_vals = feval(h, x);
 h_exact = h_op(x);
 err = h_vals - h_exact;
-pass(21) = norm(err, inf) < 1e4*vscale(h)*epslevel(h);
+pass(21) = norm(err, inf) < 1e4*vscale(h)*eps;
 
 
 %% Test on SINGFUN - multiplication of a column CHEBFUN and a row CHEBFUN:CHEBFUN:
@@ -136,7 +136,7 @@ g = chebfun(@(x) cos(30*x), 'splitting', 'on');
 h = f*g;
 h_exact = 0.13033807496531659;
 err = h - h_exact;
-pass(22) = abs(err) < 1e2*h_exact*max(epslevel(f), epslevel(g));
+pass(22) = abs(err) < 1e2*h_exact*eps;
 
 
 %% Tests for function defined on unbounded domain:
@@ -160,7 +160,7 @@ gVals = feval(g, x);
 op = @(x) [exp(x) x.*exp(x) (1-exp(x))./x]*A;
 gExact = op(x);
 err = gVals - gExact;
-pass(23) = norm(err, inf) < 1e2*max(get(g,'epslevel').*get(g,'vscale'));
+pass(23) = norm(err, inf) < 1e2*max(eps*get(g,'vscale'));
 
 
 % Some tests which make sure MTIMES behaves correctly regarding the dimensions
@@ -205,14 +205,16 @@ pass(56) = causesDimensionError(@() ones(3, 4)*Q);
 pass(57) = causesDimensionError(@() Q'*ones(2, 3));
 pass(58) = causesDimensionError(@() Q'*ones(3, 3));
 pass(59) = causesDimensionError(@() Q'*ones(4, 3));
-pass(60) = causesDimensionError(@() A*A);
-pass(61) = causesDimensionError(@() A'*A');
-pass(62) = causesDimensionError(@() Q*Q);
-pass(63) = causesDimensionError(@() Q'*Q');
+pass(60) = ~causesDimensionError(@() A*A); % These are now supported!
+pass(61) = ~causesDimensionError(@() A'*A');
+pass(62) = ~causesDimensionError(@() Q*Q);
+pass(63) = ~causesDimensionError(@() Q'*Q');
 
 %% Chebfun2 outerproducts
 % These are the same as in test_kron, just want to ensure that the syntax works!
 % Rank 1 chebfun2 
+tol = 20*pref.cheb2Prefs.chebfun2eps;
+
 f = chebfun(@(x) x.^2, pref);
 g = chebfun(@(y) sin(y), pref);
  
@@ -264,6 +266,13 @@ pass(77) = (norm(h2 - kron(F, G')) < 1e1*tol);
 pass(78) = (norm(h1 - G*F') < 1e1*tol);
 pass(79) = (norm(h2 - F*G') < 1e1*tol);
 
+% Row quasimatrices and chebfun2
+x = chebfun('x', [-1 1], pref);
+F = [1 x x.^2 x.^4]; 
+h1 = chebfun2(@(x,y) 1 + x.*cos(y) + x.^2.*sin(y) + x.^4.*y.^5);
+
+pass(80) = (norm(F'*h1-(h1'*F)') < tol); 
+
 
 end
 
@@ -275,7 +284,7 @@ function result = test_mult_function_by_scalar(f, f_op, alpha, x)
     result(1) = isequal(g1, g2);
     g_exact = @(x) f_op(x) * alpha;
     err = feval(g1, x) - g_exact(x);
-    result(2) = norm(err(:), inf) < 1e2*max(vscale(g1).*epslevel(g1));
+    result(2) = norm(err(:), inf) < 1e2*max(vscale(g1)*eps);
         
 end
 

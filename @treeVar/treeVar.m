@@ -31,7 +31,7 @@ classdef  (InferiorClasses = {?chebfun}) treeVar
     %
     % See also CHEBOP, CHEBOP/SOLVEIVP.
     
-    % Copyright 2015 by The University of Oxford and The Chebfun Developers.
+    % Copyright 2017 by The University of Oxford and The Chebfun Developers.
     % See http://www.chebfun.org/ for Chebfun information.
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -71,11 +71,6 @@ classdef  (InferiorClasses = {?chebfun}) treeVar
         %    HEIGHT: The height of the syntax tree, i.e., the number of
         %        operations between the base variables(s) and the current
         %        variable.
-        %    MULTCOEFF: The multiplication in front of the variable, which can
-        %        either be a CHEBFUN or a scalar. For example, the sequence
-        %            u = treeVar();
-        %            v = sin(x)*u'l
-        %        will have v.multcoeff == sin(x).
         %    ID: A Boolean vector, whose ith element is equal to 1 if the
         %        TREEVAR variable was constructed from the ith base variable,
         %        0 otherwise. For example, the sequence
@@ -114,8 +109,8 @@ classdef  (InferiorClasses = {?chebfun}) treeVar
             
             % Initialise a syntax tree for a base variable:
             obj.tree  = struct('method', 'constr', 'numArgs', 0, ...
-                'diffOrder', 0*IDvec, 'height', 0, 'multCoeff', 1, ...
-                'ID', logical(IDvec),'hasTerms', 0);
+                'diffOrder', 0*IDvec, 'height', 0, 'ID', logical(IDvec), ...
+                'hasTerms', 0);
         end
         
         function f = abs(f)
@@ -190,6 +185,10 @@ classdef  (InferiorClasses = {?chebfun}) treeVar
             f.tree = f.univariate(f.tree, 'atanh');
         end
         
+        function f = conj(f)
+            f.tree = f.univariate(f.tree, 'conj');
+        end
+        
         function f = cos(f)
             f.tree = f.univariate(f.tree, 'cos');
         end
@@ -246,13 +245,27 @@ classdef  (InferiorClasses = {?chebfun}) treeVar
                 k = 1;
             end
             
+            % We don't support any arguments inside diff except purely the
+            % unknown functions, i.e. nothing complicated like diff(-u),
+            % diff(-sin(u)) or diff(exp(x)*u)). To do that robustly would
+            % require differentiation of the syntax tree, which is beyond
+            % treeVars current capabilities.
+            assert(strcmp(f.tree.method, 'constr') && ...
+                f.tree.height == 0, ...
+                'CHEBFUN:TREEVAR:diff:diffArguments', ...
+                ['For first order formulation, the diff method does ', ...
+                'currently not support arguments other than simply the ', ...
+                'unknown functions. For example, diff(-u), diff(sin(u)) ', ...
+                'and diff(x*u) are unsupported. Please reformulate problem', ...
+                ' or see "help cheboppref" for how to switch to global', ...
+                ' methods']);
+            
             % The derivative syntax tree.
             f.tree = struct('method', 'diff', 'numArgs', 2, ...
                 'left', f.tree, 'right', k, ...
                 'diffOrder', f.tree.diffOrder + k*f.tree.ID, ...
                 'height', f.tree.height + 1, ...
                 'ID', f.tree.ID, ...
-                'multCoeff', f.tree.multCoeff, ...
                 'hasTerms', f.tree.hasTerms);
         end
         
@@ -283,6 +296,22 @@ classdef  (InferiorClasses = {?chebfun}) treeVar
         
         function f = expm1(f)
             f.tree = f.univariate(f.tree, 'expm1');
+        end
+        
+        function f = fred(varargin)
+            %FRED   Not supported.
+            % We don't support integral equations with our first order
+            % reformulation. However, we could accidentally end up here in case
+            % of first order integral equation, where the conditions are
+            % specified via N.LBC/RBC. Throw a meaningful error message in this
+            % case.
+            error('CHEBFUN:TREEVAR:FRED:notSupported', ...
+                ['Fred is not supported in treeVar. Please specify '...
+                'conditions via N.BC rather than N.LBC/RBC.']);
+        end
+        
+        function f = imag(f)
+            f.tree = f.univariate(f.tree, 'imag');
         end
         
         function f = log(f)
@@ -364,11 +393,11 @@ classdef  (InferiorClasses = {?chebfun}) treeVar
             h.domain = updateDomain(f, g);
         end
         
-        function plot(treeVar)
+        function plot(treeVar, varargin)
             %PLOT   Plot of a TREEVAR syntax tree.
             %
             % See also TREEVAR.PLOTTREE.
-            treeVar.plotTree(treeVar.tree);
+            treeVar.plotTree(treeVar.tree, varargin{:});
         end
         
         function h = plus(f, g)
@@ -387,11 +416,11 @@ classdef  (InferiorClasses = {?chebfun}) treeVar
             h.domain = updateDomain(f, g);
         end
         
-        function s = print(treeVar)
+        function s = print(treeVar, varargin)
             %PRINT   Text rendering of a TREEVAR syntax tree.
             %
             % See also TREEVAR.PRINTTREE.
-            s = treeVar.printTree(treeVar.tree);
+            s = treeVar.printTree(treeVar.tree, varargin{:});
         end
         
         function h = rdivide(f, g)
@@ -408,6 +437,10 @@ classdef  (InferiorClasses = {?chebfun}) treeVar
                 h.tree = treeVar.bivariate(f.tree, g.tree, 'rdivide', 2);
             end
             h.domain = updateDomain(f, g);
+        end
+        
+        function f = real(f)
+            f.tree = f.univariate(f.tree, 'real');
         end
         
         function f = sec(f)
@@ -437,6 +470,19 @@ classdef  (InferiorClasses = {?chebfun}) treeVar
         function f = sqrt(f)
             f.tree = f.univariate(f.tree, 'sqrt');
         end
+        
+        function f = sum(f)
+            %SUM   Not supported.
+            % We don't support integral equations with our first order
+            % reformulation. However, we could accidentally end up here in case
+            % of first order integral equation, where the conditions are
+            % specified via N.LBC/RBC. Throw a meaningful error message in this
+            % case.
+            error('CHEBFUN:TREEVAR:cumsum:notSupported', ['First order ' ...
+                'reformulation does not support integral equations.\nPlease ' ...
+                'specify conditions via N.BC rather than N.LBC/RBC.'])
+        end
+        
         
         function f = tan(f)
             f.tree = f.univariate(f.tree, 'tan');
@@ -475,6 +521,19 @@ classdef  (InferiorClasses = {?chebfun}) treeVar
         function f = uplus(f)
             f.tree = f.univariate(f.tree, 'uplus');
         end
+        
+        function f = volt(varargin)
+            %VOLT   Not supported.
+            % We don't support integral equations with our first order
+            % reformulation. However, we could accidentally end up here in case
+            % of first order integral equation, where the conditions are
+            % specified via N.LBC/RBC. Throw a meaningful error message in this
+            % case.
+            error('CHEBFUN:TREEVAR:VOLT:notSupported', ...
+                ['Volt is not supported in treeVar. Please specify '...
+                'conditions via N.BC rather than N.LBC/RBC.']);
+        end
+        
     end
     
     methods ( Access = private )
@@ -505,7 +564,7 @@ classdef  (InferiorClasses = {?chebfun}) treeVar
         
         % Convert higher order anonymous functions to first order systems
         [funOut, indexStart, problemDom, coeffs, totalDiffOrders] = ...
-            toFirstOrder(funIn, rhs, domain)
+            toFirstOrder(funIn, rhs, domain, numArgs, cellArg)
         
     end
     
@@ -527,7 +586,8 @@ classdef  (InferiorClasses = {?chebfun}) treeVar
         funOut = toRHS(infix, varArray, coeff, indexStart, totalDiffOrders);
         
         % Convert a syntax tree to infix form
-        [infix, varArray] = tree2infix(tree, diffOrders, varCounter, varArray)
+        [infix, varArray] = ...
+            tree2infix(tree, diffOrders, varCounter, varArray, isCoeffFun)
            
         % Construct syntax trees for univariate methods
         treeOut = univariate(treeIn, method)

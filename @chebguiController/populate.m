@@ -8,7 +8,7 @@ function populate(hObject, handles, chebg)
 %   CHEBG:      A CHEBGUI object, containing the information we want to fill
 %               the figure with.
 
-% Copyright 2015 by The University of Oxford and The Chebfun Developers.
+% Copyright 2017 by The University of Oxford and The Chebfun Developers.
 % See http://www.chebfun.org/ for Chebfun information.
 
 % Fill the String fields of the handles
@@ -128,11 +128,11 @@ elseif ( any(strcmpi(chebg.type, {'bvp', 'ivp'})) )
                 chebguiWindow('menu_ivpODE15s_Callback', hObject, [], handles)
             case 'ode45'
                 chebguiWindow('menu_ivpODE45_Callback', hObject, [], handles)
-            case 'collocation'
-                chebguiWindow('menu_ivpCollocation_Callback', ...
+            case 'values'
+                chebguiWindow('menu_ivpValues_Callback', ...
                     hObject, [], handles)
-            case 'ultraspherical'
-                chebguiWindow('menu_ivpCollocation_Ultraspherical', ...
+            case 'coeffs'
+                chebguiWindow('menu_ivpCoefficients_Callback', ...
                     hObject, [], handles)
         end
     end

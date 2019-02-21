@@ -1,4 +1,4 @@
-function [p, q, r_handle] = chebpade(F, m, n, varargin)
+function varargout = chebpade(F, m, n, varargin)
 %CHEBPADE   Chebyshev-Pade approximation.
 %   [P, Q, R_HANDLE] = CHEBPADE(F, M, N) computes polynomials P and Q of degree
 %   M and N, respectively, such that the rational function P/Q is the type (M,
@@ -17,10 +17,14 @@ function [p, q, r_handle] = chebpade(F, m, n, varargin)
 %   [P, Q, R_HANDLE] = CHEBPADE(F, M, N, TYPE, K) uses only the K-th partial sum
 %   in the Chebyshev expansion of F when computing the approximation. CHEPADE(F,
 %   M, N, K) is shorthand for CHEBPADE(F, M, N, 'clenshawlord', K).
+% 
+%   In all of the above cases, if only one output argument is specified
+%   then R_HANDLE is returned, while P and Q are returned if two output
+%   arguments are specified. 
 %
-% See also PADEAPPROX.
+% See also AAA, CF, MINIMAX, PADEAPPROX, RATINTERP.
 
-% Copyright 2015 by The University of Oxford and The Chebfun Developers.
+% Copyright 2017 by The University of Oxford and The Chebfun Developers.
 % See http://www.chebfun.org/ for Chebfun information.
 
 % TODO:  Handle quasimatrices/array-valued CHEBFUNs.
@@ -86,6 +90,17 @@ if ( F.isTransposed )
     q = q.';
 end
 
+% Return the output:
+outArgs = {p, q, r_handle};
+if ( nargout <= 1 )
+    varargout{1} = r_handle;
+elseif ( nargout <= 3 )
+    [varargout{1:nargout}] = outArgs{1:nargout};
+else
+    error('CHEBFUN:CHEBFUN:chebpade:nargout', ...
+        'Incorrect number of output arguments.'); 
+end
+
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -98,7 +113,7 @@ l = max(m, n);
 
 % Limit to fixed number of coefficients if specified.
 if ( M >= 0 )
-    F = chebfun(@(x) feval(F, x), F.ends([1 end]), M + 1);
+    F = chebfun(@(x) feval(F, x), F.domain([1 end]), M + 1);
 elseif ( numel(F.funs) > 1 )
     error('CHEBFUN:CHEBFUN:chebpade:chebpadeClenshawLord:multipleFuns', ...
         ['For a function with multiple funs, the number of coefficients ' ...

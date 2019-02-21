@@ -64,7 +64,7 @@ function varargout = plot(varargin)
 %
 % See also PLOTDATA, PLOT3.
 
-% Copyright 2015 by The University of Oxford and The Chebfun Developers.
+% Copyright 2017 by The University of Oxford and The Chebfun Developers.
 % See http://www.chebfun.org/ for Chebfun information.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -198,8 +198,6 @@ while ( ~isempty(varargin) )
             newData.xJumps = NaN;
             newData.yJumps = NaN;  
             newData.xDeltas = NaN;
-            newData.yDeltas1 = NaN;
-            newData.yDeltas2 = NaN;
             % Do nothing
         elseif ( numel(f) == 1 && numel(g) == 1 )
             % Array-valued CHEBFUN case:
@@ -304,6 +302,14 @@ end
 
 %% Plotting starts here:
 
+% Acquire initial color cycle if running R2014b+.
+if ( ~verLessThan('matlab', '8.4') )
+    if ( ~holdState )
+        set(gca, 'ColorOrderIndex', 1);
+    end
+    originalColorOrder = get(gca, 'ColorOrderIndex');
+end
+
 % Plot the lines:
 h1 = plot(lineData{:});
 set(h1, 'Marker', 'none', lineStyle{:})
@@ -311,9 +317,10 @@ set(h1, 'Marker', 'none', lineStyle{:})
 % Ensure the plot is held:
 hold on
 
-% Reset color cycle prior to point plot if running R2014b.
+% Get color cycle prior to point plot if running R2014b.
 if ( ~verLessThan('matlab', '8.4') )
-    set(gca, 'ColorOrderIndex', 1);
+    newColorOrder = get(gca, 'ColorOrderIndex');
+    set(gca, 'ColorOrderIndex', originalColorOrder)
 end
 
 % Plot the points:
@@ -327,7 +334,7 @@ end
 
 % Reset color cycle prior to jump plot if running R2014b.
 if ( ~verLessThan('matlab', '8.4') )
-    set(gca, 'ColorOrderIndex', 1);
+    set(gca, 'ColorOrderIndex', originalColorOrder);
 end
 
 % Plot the jumps:
@@ -360,13 +367,28 @@ end
 
 % Reset colors prior to legend data plot if running R2014b.
 if ( ~verLessThan('matlab', '8.4') )
-    set(gca, 'ColorOrderIndex', 1);
+    set(gca, 'ColorOrderIndex', originalColorOrder);
+end
+
+% Generate data for the dummy plot for the legend.  dummyData is the same as
+% lineData but with the numeric entries replaced by NaNs of suitable dimension
+% so that they don't show up on the plot but are still "active" for the legend.
+dummyData = lineData;
+for i = 1:1:length(dummyData)
+    if ( isnumeric(lineData{i}) )
+        dummyData{i} = NaN(1, size(dummyData{i}, 2));
+    end
 end
 
 % Plot the dummy data, which includes both line and point style:
-hDummy = plot(lineData{:});
+hDummy = plot(dummyData{:});
 if ( ~isempty(lineStyle) || ~isempty(pointStyle) )
     set(hDummy, lineStyle{:}, pointStyle{:});
+end
+
+% Reset colors prior to legend data plot if running R2014b.
+if ( ~verLessThan('matlab', '8.4') )
+    set(gca, 'ColorOrderIndex', newColorOrder);
 end
 
 %% Setting xLim and yLim:
@@ -404,8 +426,13 @@ set(h1, 'handlevis', 'off');
 set(h2, 'handlevis', 'off');
 set(h3, 'handlevis', 'off');
 set(h4, 'handlevis', 'off');
-% The dummy plot is invisible, but its handle is visible (for LEGEND).
-set(hDummy, 'handlevis', 'on', 'visible', 'off');     %  ¯\_(o.O)_/¯
+
+% Ensure that the both the handle for the dummy plot and the dummy plot itself
+% are visible for LEGEND().  The dummy plot could in theory have its 'Visible'
+% property set to 'off', but the data is NaN, so it doesn't draw anything
+% anyway.  Moreover, if 'Visible' is 'off', the entries in the legend will be
+% grayed out in R2016b and later.
+set(hDummy, 'handlevis', 'on', 'visible', 'on');     %  ¯\_(o.O)_/¯
 
 % Give an output to the plot handles if requested:
 if ( nargout > 0 )
@@ -424,7 +451,7 @@ function h = plotDeltas(deltaData)
         colorOrder = circshift(originalColorOrder, 1);
     end
 
-    for (k = 1:1:numel(deltaData))
+    for k = 1:1:numel(deltaData)
         % Set color for the next delta function plot.
         if ( verLessThan('matlab', '8.4') )
             % Manually manipulate the ColorOrder for R2014a or earlier.

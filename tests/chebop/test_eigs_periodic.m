@@ -6,9 +6,9 @@ if ( nargin < 1 )
     pref = cheboppref;
 end
 
-tol = 1e-10;
+tol = 1e2*pref.bvpTol;
 
-%% Problem description.
+%% EXAMPLE USING TRIGCOLLOC.
 % Solving
 %   -u'' = lambda*u,
 % for x in [0 2*pi],  subject to
@@ -35,7 +35,7 @@ Dexact = [0 1 1 4 4 9 9]';
 pass(1) = norm(D - Dexact, inf) < tol;
 pass(2) = isequal(get(V{1}.funs{1}, 'tech'), @trigtech);
 
-%% Problem description.
+%% ANOTHER EXAMPLE USING TRIGCOLLOC.
 % Solving
 %   -u'' + 2*q*cos(2*x)*u = lambda*u,
 % for x in [0 2*pi],  subject to

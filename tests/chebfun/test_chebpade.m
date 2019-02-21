@@ -14,12 +14,12 @@ Q = chebfun([ 1; 0.1155; -0.8573; -0.2679; 0.5246 ], dom, 'coeffs');
 R = P./Q;
 [p, q, r] = chebpade(R, 4, 4, 'maehly');
 err = norm(P - p) + norm(Q - q);
-pass(1) = err < 100*max(vscale(R).*epslevel(R));
+pass(1) = err < 100*vscale(R)*eps;
 
 % An example which requires degree-reduction.
 [p, q, r] = chebpade(P./Q, 6, 5, 'maehly');
 err = norm(P - p) + norm(Q - q);
-pass(2) = err < 100*max(vscale(R).*epslevel(R));
+pass(2) = err < 100*vscale(R)*eps;
 
 % An example by Geddes.
 a = [-464/6375 ; -742/6375 ; 349/12750 ; 512/6375 ; 13/3400 ; 2129/51000 ; ...
@@ -39,6 +39,11 @@ f = chebfun(@exp);
 ratio1 = p2(.3)/p(.3);
 ratio2 = r2(-.4)/r(-.4);
 pass(5) = norm([ratio1 ratio2] - [1i 1i], inf) < 1e-13;
+
+% Try a call with an explicit number of coefficients in
+% the Chebyshev expansion of f.
+[p,q,r] = chebpade(f,2,2,10);
+pass(6) = norm(f - p./q) < 2e-4;
 
 % Restore the warning state.
 warning(warnState);

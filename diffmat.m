@@ -45,7 +45,8 @@ function D = diffmat(N, varargin)
 %   conditions.
 %
 %   D = DIFFMAT(N, 'periodic') returns the N x N first-order Fourier 
-%   differentiation matrix on the default interval [-1 1].
+%   differentiation matrix on the default interval [-1 1]. The tag
+%   'periodic' can be replaced by 'trig'.
 %
 %   D = DIFFMAT(N, P, 'periodic') returns the N x N Fourier differentiation 
 %   matrix of order P  on the default interval [-1 1].
@@ -90,9 +91,9 @@ function D = diffmat(N, varargin)
 %   condition sum(U) = I for a scalar I, where U is the solution to the 
 %   resulting system.
 %
-% See also DIFF, CHEBCOLLOC2.DIFFMAT, CUMSUMMAT.
+% See also DIFF, CHEBCOLLOC2.DIFFMAT, CUMSUMMAT, DIFFROW, INTMAT, INTROW.
 
-% Copyright 2015 by The University of Oxford and The Chebfun Developers.
+% Copyright 2017 by The University of Oxford and The Chebfun Developers.
 % See http://www.chebfun.org/ for Chebfun information.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -517,9 +518,9 @@ for j = 1:numel(varargin)
                     m = n - p;
                 end
                 
-            case 'periodic'
-                mapFrom = v;
-                mapTo = v;
+            case {'periodic', 'trig'}
+                mapFrom = 'periodic';
+                mapTo = 'periodic';
                 if ( m ~= n )
                     error('CHEBFUN:diffmat:wrongInput', ...
                         ['Rectangular Fourier differentiation matrices are '...

@@ -32,7 +32,7 @@ function out = feval(N, varargin)
 %
 % See also CHEBOP/SUBSREF, LINOP/MTIMES, CHEBOP/MATRIX.
 
-% Copyright 2015 by The University of Oxford and The Chebfun Developers.
+% Copyright 2017 by The University of Oxford and The Chebfun Developers.
 % See http://www.chebfun.org/ for Chebfun information.
 
 % Support for calling a linear CHEBOP with a numerical input to get its
@@ -188,7 +188,7 @@ elseif ( numberOfInputs == 2 )
 
     % Evaluate the operator!
     out = N.op(x, u);
-
+    
 else
     % The operator is specified on the form
     %   N.op = @(x, u, v) = [diff(u,2) + v; u + diff(v)]
@@ -228,6 +228,12 @@ else
         out = doEval(N, args);
     end
     
+end
+
+% If the operator is written in a function file or nested function, then it
+% is natural for it to be returned in cell form. Convert it to a chebmatrix:
+if ( iscell(out) )
+    out = vertcat(out{:}); % TODO: is this correct for multiple RHSs?
 end
 
 end

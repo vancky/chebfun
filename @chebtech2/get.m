@@ -13,7 +13,7 @@ function out = get(f, prop)
 %
 % See also CHEBTECH, CHEBTECH2.
 
-% Copyright 2015 by The University of Oxford and The Chebfun Developers. 
+% Copyright 2017 by The University of Oxford and The Chebfun Developers. 
 % See http://www.chebfun.org/ for Chebfun information.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -23,8 +23,14 @@ function out = get(f, prop)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 switch prop
-    case fieldnames(f)
-        out = f.(prop);
+    case 'coeffs'
+        out = f.coeffs;
+    case 'hscale'
+        out = f.hscale;
+    case 'ishappy'
+        out = f.ishappy;
+    case 'epslevel'
+        out = f.epslevel;
     case 'points'
         out = f.points();
     case 'lval'

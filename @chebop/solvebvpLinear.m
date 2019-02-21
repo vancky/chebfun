@@ -21,7 +21,7 @@ function [u, info] = solvebvpLinear(L, rhs, Ninit, pref, displayInfo)
 %
 % See also: chebop/solvebvp
 
-% Copyright 2015 by The University of Oxford and The Chebfun Developers.
+% Copyright 2017 by The University of Oxford and The Chebfun Developers.
 % See http://www.chebfun.org/ for Chebfun information.
 
 % Get defaults:
@@ -37,19 +37,15 @@ end
 % values of L.constraint:
 L.constraint = -L.constraint;
 
-% Solutions to the linearized problems need to be more accurate than the
-% nonlinear iteration tolerance.
-linpref = pref;
-linpref.errTol = max(eps, pref.errTol/100);
-
 % Solve the linear problem:
-del = linsolve(L, rhs, linpref);
+del = linsolve(L, rhs, pref);
 
 if ( ~isempty(Ninit) )
     % If Ninit is not empty, N will have been linearized around Ninit. In that
     % case, we need to regard the solution del obtained above as a Newton
     % correction to Ninit.
     u = Ninit + del;
+    u = simplify(u);
 else
     u = del;
 end

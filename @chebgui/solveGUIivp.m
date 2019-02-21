@@ -22,7 +22,7 @@ function varargout = solveGUIivp(guifile, handles)
 %
 % See also: chebgui/solveGUI, chebgui/solveGUIbvp.
 
-% Copyright 2015 by The University of Oxford and The Chebfun Developers.
+% Copyright 2017 by The University of Oxford and The Chebfun Developers.
 % See http://www.chebfun.org/ for Chebfun information.
 
 % Handles will be an empty variable if we are solving without using the GUI
@@ -120,7 +120,8 @@ end
 options = setupODEoptions(handles.guifile, expInfo);
 
 % Are we solving the problem globally, or with one of the MATLAB solvers?
-solvingGlobally = isempty(strfind(func2str(options.ivpSolver), 'chebfun'));
+solvingGlobally = strcmp(options.ivpSolver, 'values') || ...
+    strcmp(options.ivpSolver, 'coeffs');
 
 % Various things we only need to think about when in the GUI, changes GUI
 % compenents.

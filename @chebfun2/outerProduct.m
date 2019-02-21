@@ -7,7 +7,7 @@ function h = outerProduct(f, g)
 %   This command is for internal use only. Users are expected to use  f*g' or
 %   f*g.'
 
-% Copyright 2015 by The University of Oxford and The Chebfun Developers.
+% Copyright 2017 by The University of Oxford and The Chebfun Developers.
 % See http://www.chebfun.org/ for Chebfun information.
 
 % TODO: This command could use a compression-like algorithm, but instead we will
@@ -36,7 +36,7 @@ fdom = domain(f);
 gdom = domain(g);
 dom = [gdom, fdom]; 
 
-h = chebfun2(0, dom); 
+h = chebfun2();
 % Form outerproduct: 
 if ( size(f, 2) == size(g, 1) )
     h.cols = f; 

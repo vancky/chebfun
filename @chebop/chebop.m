@@ -35,6 +35,16 @@ classdef (InferiorClasses = {?double}) chebop
 % number of dependent variables, whether specified as names or CHEBMATRIX
 % elements (see section on parameter-dependent problems below).
 %
+% For scalar problems, it is possible to specify the OP of a CHEBOP with a
+% string, where a backtick (`) is used to denote a derivative. The two scalar
+% problems above could thus be specified as
+%
+%       N.op = 'x*u` + u'
+%       N.op = 'u`` - exp(u)'
+%
+% Internally, CHEBOP will convert the string expressions to the corresponding
+% anonymous function.
+%
 % By default, the operator acts on CHEBFUN objects defined on the domain [-1,1].
 % CHEBOP(OP, D), for a vector D, gives a different domain, with breakpoints (if
 % any) described by D.
@@ -45,7 +55,21 @@ classdef (InferiorClasses = {?double}) chebop
 % left and right endpoints of the domain D. Possible values for LBC and RBC are:
 %
 %   []          : No condition (for only assigning LBC or RBC in constructor).
-%   scalar      : All variables equal the given value.
+%   vector      : Only supported in the scalar case, and for first order
+%                 coupled systems (i.e. no support for higher order coupled
+%                 systems). 
+%                   * In the scalar case, the value of the solution is given by
+%                     the first entry of the vector, the value of its first
+%                     derivative by the second entry, etc. E.g. for a second
+%                     order problem on [0,1], N.lbc = [1;3] specifies
+%                         u(0) = 1, u'(0) = 3.
+%                   * In the system case, the value of the first unknown
+%                     function at the endpoint is given by the first entry of
+%                     the vector, the value of the second unknown function by
+%                     the second entry of the vector, etc. E.g. for a system
+%                     with two unknown functions on [0,1], N.lbc = [1;3]
+%                     specifies
+%                         u(0) = 1, v(0) = 1.
 %   'dirichlet' : All variables equal zero.
 %   'neumann'   : All variables have derivative zero.
 %   function    : A function handle that must accept all dependent variables as
@@ -58,17 +82,22 @@ classdef (InferiorClasses = {?double}) chebop
 % describing the boundary conditions must return vertically concatenated
 % elements (again, differing from V4 syntax).
 %
-% Examples of boundary condition functionals::
+% Examples of how boundary conditions can be specified:
 %
-%   @(u) diff(u) - 2;               % set u' = 2 at the appropriate endpoint
-%   @(u, v, w) [ u - 1 ; w ];       % set u = 1 and w = 0 at the endpoint
-%   @(u) [u{1} - 1; u{3}];          % Same as above, using CHEBMATRIX syntax.
-%   @(u, v, w) u.*v - diff(w);      % set u*v = w' at the endpoint
+%   N.lbc = 0;                         % Set u = 0 at the left endpoint
+%   N.rbc = 'neumann'                  % Set u' = 0 at the right endpoint
+%   N.lbc = [1; 3; 2];                 % Set u = 1, u' = 3, u'' = 2 at left end
+%   N.lbc = @(u) diff(u) - 2;          % set u' = 2 at the left endpoint
+%   N.lbc = @(u, v, w) [ u - 1 ; w ];  % set u = 1 and w = 0 at the endpoint
+%   N.lbc = @(u) [u{1} - 1; u{3}];     % Same as above, using CHEBMATRIX syntax.
+%   N.rbc = @(u, v, w) u.*v - diff(w); % set u*v = w' at the right endpoint
 %
 % CHEBOP(OP, D, BC) gives boundary or other side conditions in an alternate
 % form. Choices for BC are:
 %
-%   scalar      : All variables equal the given value at both endpoints.
+%   vector      : Only supported in the scalar case. The value of the solution 
+%                 at both endpoints is given by the first entry of the vector,
+%                 the value of its first derivative by the second entry, etc.
 %   'dirichlet' : All variables equal zero at both endpoints.
 %   'neumann'   : All variables have derivative zero at both endpoints.
 %   'periodic'  : Impose periodicity on all dependent variables.
@@ -100,12 +129,18 @@ classdef (InferiorClasses = {?double}) chebop
 % of 'dirichlet', 'neumann', or 'periodic', removes pre-existing entries in
 % N.lbc, N.rbc, and N.bc.
 %
-% Example:
+% Example (second order BVP):
 %
 %   N = chebop(-5, 5);  % Constructs an empty CHEBOP on the interval [-5,5]
 %   N.op = @(x, u) 0.01*diff(u, 2) - x.*u;
 %   N.bc = 'dirichlet';
 %   plot(N\1)
+%
+% Example (Lotka-Volterra, first order coupled IVP):
+%   N = chebop(@(t,u,v) [diff(u)-2.*u+u.*v; diff(v)+v-u.*v], [0 20]);
+%   N.lbc = @(u,v) [u - 0.5; v - 1]; % Initial populations
+%   [u, v] = N\0;
+%   plot([u, v], 'linewidth', 2)
 %
 %
 % %% INITIAL VALUE PROBLEMS %%
@@ -127,7 +162,7 @@ classdef (InferiorClasses = {?double}) chebop
 %   vdpFun = @(u) diff(u, 2) - 20*(1-u.^2).*diff(u) + u;
 %   dom = [0 100];
 %   N = chebop(vdpFun, dom);
-%   N.lbc = @(u) [u - 2; diff(u)];
+%   N.lbc = [2; 0];
 %   u = N\0
 %   plot(u)
 %
@@ -137,7 +172,9 @@ classdef (InferiorClasses = {?double}) chebop
 % without the need to introduce extra equations into the system. Simply add the
 % unknown parameters in the list of arguments to the operator. By default, any
 % variable that is not acted on by differentiation or integration is treated as
-% a parameter, rather than a function.
+% a parameter, rather than a function. The exception is when no variable
+% appearing in a problem is differentiated or integrated, in which case, all
+% variables get treated as functions, rather than parameters.
 %
 % Example (unknown parameter in differential equation):
 %
@@ -154,6 +191,14 @@ classdef (InferiorClasses = {?double}) chebop
 %   N.bc = @(x, u, p) [u(0); u(1) - 2; feval(diff(u), 0) - p];
 %   up = N\0;
 %   plot(up), [u, p] = deal(up)
+%
+% Example (no differentiation/integration)
+%
+%   % Find u and v on [-1, 1] s.t. u^2 - x + sin(v) = v + exp(v) + u = sin(4x)+2
+%   x = chebfun('x');
+%   f = sin(4*x) + 2;
+%   N = chebop(@(x,u,v) [u.^2 - x + sin(v); v + exp(v) + u]);
+%   [u, v] = N\[f; f]
 %
 % It is possible to explicitly pass parameters as parts of the initial guess for
 % a nonlinear problem by assigning it to the appropriate entry of a CHEBMATRIX
@@ -183,9 +228,36 @@ classdef (InferiorClasses = {?double}) chebop
 % the default CHEBOPPREF via cheboppref.setDefaults('vectorize', false).
 %
 %
-% See also CHEBOP/MTIMES, CHEBOP/MLDIVIDE, CHEBOPPREF.
+% %% MAXNORM %%
+%
+% Through the events capabilities of Matlab's built-in ODE solvers, it is
+% possible to enforce solver for IVPs to bail out of the solution process if a
+% maximum norm of the solution is exceeded. This is particularly useful for
+% problems that blow up in finite time. The information is passed through the
+% MAXNORM field of the CHEBOP. In case of a coupled system, a vector can be
+% passed.
+%
+%   Example (scalar problem, stop solver once |u| > 10 )
+%       T = 30 ; N = chebop(0,T); t = chebfun('t',[0,T]); N.maxnorm = 10;
+%       N.op = @(t,y) diff(y,2)+y-0.09*y^3; N.lbc = [-1; 0];
+%       y = N\sin(0.05*t); plot(y,diff(y))
+%
+%   Example (Lotka-Volterra, stop if |u| > 1 or |v| > 5 )
+%       N = chebop(@(t,u,v) [diff(u)-2.*u+u.*v; diff(v)+v-u.*v], [0 10]);
+%       N.lbc = @(u, v) [u-.5; v-1]; N.maxnorm = [1 5];
+%       [u,v] = N\0; plot([u, v])
+%
+% If the solver bails out before the specified end time T, the solution returned
+% will include a piece of a NaN CHEBFUN on the time interval from when the
+% solver stops until T. Note that the detection only works if the solution
+% crosses the threshold, so if the initial condition violates the maxnorm
+% condition, the solver is likely to miss it.
+%
+%
+% See also CHEBOP/MTIMES, CHEBOP/MLDIVIDE, CHEBOP/SOLVEBVP, CHEBOP/SOLVEIVP, 
+%   CHEBOPPREF.
 
-% Copyright 2015 by The University of Oxford and The Chebfun Developers. See
+% Copyright 2017 by The University of Oxford and The Chebfun Developers. See
 % http://www.chebfun.org/ for Chebfun information.
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -194,15 +266,17 @@ classdef (InferiorClasses = {?double}) chebop
     properties ( Access = public )
         domain = [];    % Domain of the operator
         op = [];        % The operator
+        opShow = [];    % Pretty print the operator
         lbc = [];       % Left boundary condition(s)
         lbcShow = [];   % Pretty print left boundary condition(s)
         rbc = [];       % Right boundary condition(s)
         rbcShow = [];   % Pretty print right boundary condition(s)
         bc = [];        % Other/internal/mixed boundary conditions
-        bcShow = [];   % Pretty print other boundary condition(s)
+        bcShow = [];    % Pretty print other boundary condition(s)
         init = [];      % Initial guess of a solution
         numVars = [];   % Number of variables the CHEBOP operates on.
         vectorize = []; % Automatic vectorization?
+        maxnorm = [];   % Maximum norm of solution before IVP solver bailing.
     end
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -243,6 +317,12 @@ classdef (InferiorClasses = {?double}) chebop
                 end
             end
             
+            % String parsing of op
+            if ischar(op)
+                anF = stringParser.str2anon(op, 'bvp', 'de');
+                op = eval(anF);
+            end
+            
             % Assign operator and domain:
             N.op = op;
             
@@ -281,32 +361,6 @@ classdef (InferiorClasses = {?double}) chebop
     end
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    %% CLASS METHODS
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    methods ( Access = public, Static = false )
-        
-        % Alternate & syntax for BC's.
-        N = and(N, BC)
-        
-        % Find selected eigenvalues and eigenfunctions of a linear CHEBOP.
-        varargout = eigs(N, varargin)
-        
-        % Linearize a CHEBOP around a CHEBFUN u.
-        [L, res, isLinear, u] = ...
-            linearize(N, u, x, linCheckFlag, paramReshapeFlag);  
-        
-        %\   Chebop backslash.
-        varargout = mldivide(N, rhs, pref, varargin)
-        
-        % The number of input arguments to a CHEBOP .OP field.
-        nIn = nargin(N)
-        
-        % Determine discretization for a CHEBOP object
-        pref = determineDiscretization(N, L, pref)
-        
-    end
-    
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %% PRIVATE METHODS:
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     methods ( Access = private, Static = false )
@@ -323,6 +377,17 @@ classdef (InferiorClasses = {?double}) chebop
         
         % Clear periodic boundary conditions.
         [N, L] = clearPeriodicBCs(N, L)
+        
+        function funArgs = getFunArgs(N)
+            % GETFUNARGS  Get input argument list of a CHEBOP .op fields as a string
+            if ( isempty(N.op) )
+                funArgs = '';
+                return
+            end
+            funString = func2str(N.op);                       % Anon. func. string
+            firstRightParLoc = min(strfind(funString, ')'));  % First ) in string
+            funArgs = funString(3:firstRightParLoc-1);        % Grab variables name
+        end
         
     end
     
@@ -377,7 +442,7 @@ classdef (InferiorClasses = {?double}) chebop
         % Solve a linear problem posed with CHEBOP.
         [u, info] = solvebvpLinear(L, rhs, Ninit, displayInfo, pref)
         
-    end
+    end 
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    
     %% METHODS IMPLEMENTED IN THIS FILE:
@@ -543,5 +608,12 @@ classdef (InferiorClasses = {?double}) chebop
                 isempty(N.rbc) && isempty(N.bc) && isempty(N.init);
         end
         
+        function out = hasbc(N)
+            %HASBC   Test for BCs in a CHEBOP.
+            %   HASBC(N) returns logical true if N has a non-empty BC, LBC, or
+            %   RBC field.
+            out = ~isempty(N.rbc) || ~isempty(N.bc) || ~isempty(N.init);
+        end
+       
     end    
 end

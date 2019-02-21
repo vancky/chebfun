@@ -19,7 +19,7 @@ function g = mat2cell(f, M, N)
 %
 % See also CELL2MAT.
 
-% Copyright 2015 by The University of Oxford and The Chebfun Developers.
+% Copyright 2017 by The University of Oxford and The Chebfun Developers.
 % See http://www.chebfun.org/ for Chebfun information.
 
 % Return an empty result:
@@ -48,7 +48,6 @@ end
 
 % Split the coefficients into cells of the correct size:
 coeffs = mat2cell(f.coeffs, n, N);
-epslevel = mat2cell(f.epslevel, 1, N);
 
 % Create a cell for storing the CHEBTECH objects
 g = cell(1, numel(N));
@@ -61,7 +60,6 @@ for k = 1:numel(N)
     % Assign values to the fields of the CHEBTECH
     gk.ishappy = f.ishappy;
     gk.coeffs = coeffs{k};
-    gk.epslevel = epslevel{k};
     
     % Store the CHEBTECH in the cell-array returned.
     g{k} = gk;

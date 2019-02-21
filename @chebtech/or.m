@@ -7,11 +7,10 @@ function f = or(f, g)
 %   0.  F and G must either be identically zero or have roots in their domains.
 %   If this is not the case, garbage is returned with no warning.
 
-% Copyright 2015 by The University of Oxford and The Chebfun Developers.
+% Copyright 2017 by The University of Oxford and The Chebfun Developers.
 % See http://www.chebfun.org/ for Chebfun information.
 
 arbitraryPoint = 0.1273881594;
 f.coeffs = feval(f, arbitraryPoint) | feval(g, arbitraryPoint);
-f.epslevel = 0*f.coeffs + eps;
 
 end

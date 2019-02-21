@@ -66,11 +66,11 @@ pass(11) = all(feval(f, linspace(-1, 1, 10)) == 1);
 % Test 'trunc', flag.
 f = chebfun(@abs, 'trunc', 10, 'splitting', 'on');
 c = get(f, 'coeffs');
-pass(12) = abs(-4/63/pi - c(9)) < get(f, 'epslevel');
+pass(12) = abs(-4/63/pi - c(9)) < 10*eps;
 
 % Test construction from cells of strings:
 f = chebfun({'x','x-1'}, [0 1 2]);
-pass(13) = norm(feval(f, [.5, 1.5]) - .5) < get(f, 'epslevel');
+pass(13) = norm(feval(f, [.5, 1.5]) - .5) < eps;
 
 % Test construction from a chebfun:
 x = chebfun('x', [0, 5]);
@@ -83,7 +83,7 @@ pass(14) = all(domain(f) == [0 2] );
 % Test construction from a piecewise chebfun:
 f = chebfun(chebfun({'x','x'}, [-1 0 1]));
 x = [-.5, .5];
-pass(15) = numel(f.funs) == 1  && norm(feval(f, x) - x) < get(f, 'epslevel');
+pass(15) = numel(f.funs) == 1  && norm(feval(f, x) - x) < eps;
 
 % Test 'minSamples' flag.
 f_op = @(x) -x - x.^2 + exp(-(50*(x - .5)).^4);
@@ -91,7 +91,7 @@ f1 = chebfun(f_op, 'minSamples', 17);
 err1 = norm(feval(f1, xx) - f_op(xx), inf);
 f2 = chebfun(f_op, 'minSamples', 33);
 err2 = norm(feval(f2, xx) - f_op(xx), inf);
-pass(16) = (err1 > 1e-3) && (err2 < 1e2*vscale(f2)*epslevel(f2));
+pass(16) = (err1 > 1e-3) && (err2 < 1e2*vscale(f2)*eps);
 
 % Test support for "legacy" preferences.
 f_op = @(x) sin(200*x);
@@ -127,9 +127,6 @@ pass(23) = get(f, 'ishappy') && isa(f.funs{1}.onefun.smoothPart, 'chebtech1');
 f = chebfun(@(x) 1./x, [0 1], p, 'exps', [-1 0]);
 pass(24) = get(f, 'ishappy') && isa(f.funs{1}.onefun.smoothPart, 'chebtech1');
 
-
-
-
 % Test the vectorise flag on an array-valued function:
 try
     f = chebfun(@(x) [x^2 sin(x)*cos(x)], pref, 'vectorize'); %#ok<NASGU>
@@ -137,5 +134,32 @@ try
 catch
     pass(25) = false;
 end
+
+% Test the 'eps' preference.
+f = chebfun(@sin);
+g = chebfun(@sin, 'eps', 1e-6);
+pass(26) = length(g) < length(f);
+
+% Test the use of 'coeffs' and 'chebkind' simultaneously.
+c = (1:5).';
+try
+    chebfun(c, 'coeffs', 'chebkind', 1);
+catch ME
+    pass(27) = strcmpi(ME.message, [' ''coeffs'' and ''chebkind'' ' ...
+        'should not be specified simultaneously.']);
+end
+
+try
+    chebfun(c, 'chebkind', 2, 'coeffs');
+catch ME
+    pass(28) = strcmpi(ME.message, [' ''coeffs'' and ''chebkind'' ' ...
+        'should not be specified simultaneously.']);
+end
+
+% Test construction from a chebfun row (transposed chebfun). The result
+% should be a chebfun column (not transposed).
+f = chebfun(@(x) cos(pi*x))';
+g = chebfun(f);
+pass(29) = g.isTransposed == 0;
 
 end

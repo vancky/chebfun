@@ -1,24 +1,37 @@
 function out = chebcoeffs(f, varargin)
-%CHEBCOEFFS   Chebyshev polynomial coefficients of a CHEBFUN.
-%   A = CHEBCOEFFS(F, N) returns the first N Chebyshev coefficients of F is
-%   the column vector A such that F = A(1) T_0(x) +  A(2) T_1(x) + ... + 
-%   A(N) T_(N-1)(x), where T_M(x) denotes the M-th Chebyshev polynomial of the
-%   first kind.
+%CHEBCOEFFS   Chebyshev coefficients of a CHEBFUN.
+%   A = CHEBCOEFFS(F) returns the Chebyshev coefficients of F assuming 
+%   it is a global (not piecewise) chebfun.  This is column vector of
+%   coefficients such that  F = A(1) T_0(x) + ... + A(N) T_(N-1)(x),
+%   where N is the length of F.
 %
-%   If F has a 'finite' Chebyshev expansion (i.e., it is a smooth CHEBFUN with
-%   no breakpoints or endpoint singularities and is based on a CHEBTECH), then
-%   CHEBCOEFFS(F) is equivalent to CHEBCOEFFS(F, LENGTH(F)). This syntax should
-%   be used with caution, and passing N is preferred.
+%   If F is an array-valued chebfun, then A is a matrix with the
+%   same number of columns as F.
 %
-%   If F is array-valued with M columns, then A is an NxM matrix.
+%   If the domain of F is [a,b] rather than [-1,1], then the 
+%   coefficients are those of F transplanted to [-1,1].
 %
-%   C = CHEBCOEFFS(F, N, 'kind', 2) returns the vector of coefficients of F
-%   such that F = C(1) + C(2) U_1(x) + ... + C(N) U_(N-1)(x), where U_M(x)
-%   denotes the M-th Chebyshev polynomial of the second kind.
+%   If F is a piecewise chebfun, you can extract the Chebyshev
+%   coefficients of the pieces with GET(F, 'COEFFS').
 %
-% See also LEGCOEFFS, FOURCOEFFS.
+%   Alternatively, A = CHEBCOEFFS(F, N) returns the first N Chebyshev
+%   coefficients of a piecewise chebfun F even though F is not
+%   represented by a global Chebyshev expansion.  Chebfun does this
+%   by evaluating appropriate integrals. 
+%
+%   A = CHEBCOEFFS(F, 'kind', 2) or A = CHEBCOEFFS(F, N, 'kind', 2)
+%   return vectors or matrices corresponding to expansions 
+%   F = A(1) U_0(x) + ... + A(N) U_(N-1)(x) in Chebyshev polynomials
+%   of the second kind.
+%
+%   Examples:
+%    x = chebfun('x');
+%    chebcoeffs(exp(x))
+%    chebcoeffs(abs(x),10)
+%
+% See also LEGCOEFFS, TRIGCOEFFS.
 
-% Copyright 2015 by The University of Oxford and The Chebfun Developers. 
+% Copyright 2017 by The University of Oxford and The Chebfun Developers. 
 % See http://www.chebfun.org/ for Chebfun information.
 
 % Trivial empty case:
@@ -76,48 +89,30 @@ end
 
 %% Compute the coefficients:
 if ( numFuns == 1 )
-    
-    % We compute 2nd-kind coefficients by computing the 1st-kind coefficients and
-    % using a recurrence relation.  The recurrence for the coefficient of U_n
-    % requires the coefficients of T_n and T_{n + 2}, so we need to compute two
-    % extra 1st-kind coefficients if 2nd-kind coefficients have been requested.
-    if ( kind == 2 )
-        N = N + 2;
-    end
-    
     % CHEBCOEFFS() of a smooth piece:
-    out = chebcoeffs(f.funs{1}, N);   
-    
-    % Compute 2nd-kind coefficients from 1st-kind ones using the recurrence
-    %   T_n(x) = (1/2)*(U_n(x) - U_{n-2}(x)):
-    if ( kind == 2 )
-        out(1,:) = 2*out(1,:);
-        out = 0.5*[out(1:end-2,:) - out(3:end,:) ; out(end-1:end,:)];
-        out = out(1:end-2,:);
-    end
-    
+    out = chebcoeffs(f.funs{1}, N, kind);
+
 else
     % CHEBCOEFFS() of a piecewise smooth CHEBFUN:
+    % (Compute coefficients via inner products.)
 
-    % Compute coefficients via inner products.
-    d = f.domain([1, end]);
-    x = chebfun('x', d);
+    % Construct a Chebfun of the appropriate Chebyshev weight:
+    d = f.domain;
+    x = chebfun([d(1) ; d(end)], [d(1), d(end)]);
+    w = sqrt((x - d(1)).*(d(end) - x));
     if ( kind == 1 )
-        w = 1./sqrt((x - d(1)).*(d(2) - x));
-    elseif ( kind == 2 )
-        w = sqrt((x - d(1)).*(d(2) - x));
+        w = 1./w;
     end
     
+    % Chebyshev polynomials up to degree N - 1:
+    T = chebpoly(0:(N-1), d, kind);
+    
+    % Compute the weighted inner products:
     numCols = numColumns(f);
     out = zeros(N, numCols);
-    f = mat2cell(f);
-    T = chebpoly(0:(N-1), d, kind);
-    T = mat2cell(T);
-    for k = 1:N
-        Tkw = T{k}.*w;
-        for j = 1:numCols
-            out(k,j) = innerProduct(f{j}, Tkw);
-        end
+    for j = 1:numCols
+        fjw = extractColumns(f, j).*w;
+        out(:,j) = innerProduct(fjw, T);
     end
      
     if ( kind == 1 )

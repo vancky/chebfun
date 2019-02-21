@@ -1,40 +1,39 @@
-
 function [x, w, v] = jacpts(n, a, b, int, meth)
-%JACPTS  Gauss-Jacobi Quadrature Nodes and Weights.
+%JACPTS  Gauss-Jacobi quadrature nodes and weights.
 %   X = JACPTS(N, ALPHA, BETA) returns the N roots of the degree N Jacobi
-%   polynomial with parameters ALPHA and BETA (which must both be greater than
-%   or equal -1) where the Jacobi weight function is defined by w(x) =
-%   (1-x)^ALPHA*(1+x)^BETA.
+%   polynomial with parameters ALPHA and BETA (which must both be > -1)
+%   where the Jacobi weight function is w(x) = (1-x)^ALPHA*(1+x)^BETA.
 %
-%   [X, W] = JACPTS(N, ALPHA, BETA) returns also a row vector W of weights for
-%   Gauss-Jacobi quadrature.
+%   [X, W] = JACPTS(N, ALPHA, BETA) returns also a row vector W of weights.
 %
 %   [X, W, V] = JACPTS(N, ALPHA, BETA) returns additionally a column vector V of
 %   weights in the barycentric formula corresponding to the points X.
 %
-%   JACPTS(N, ALPHA, BETA, INTERVAL, METHOD) or LEGPTS(N, ALPHA, BETA, METHOD)
+%   JACPTS(N, ALPHA, BETA, INTERVAL, METHOD) or JACPTS(N, ALPHA, BETA, METHOD)
 %   allows the user to select which method to use.
 %    METHOD = 'REC' uses the recurrence relation for the Jacobi polynomials
 %     and their derivatives to perform Newton iteration on the WKB approximation
 %     to the roots. Default for N < 100.
 %    METHOD = 'ASY' uses the Hale-Townsend fast algorithm based upon asymptotic
 %     formulae, which is fast and accurate. Default for N >= 100.
-%    METHOD = 'GW' will use the traditional Golub-Welsch eigenvalue method,
-%       which is maintained mostly for historical reasons.
+%    METHOD = 'GW' uses the traditional Golub-Welsch eigenvalue method,
+%     which is maintained mostly for historical reasons.
 %
 %   [X, W, V] = JACPTS(N, ALPHA, BETA, [A, B]) scales the nodes and weights for
 %       the finite interval [A,B].
 %
 %   The cases ALPHA = BETA = -.5 and ALPHA = BETA = .5 correspond to
 %   Gauss-Chebyshev nodes and quadrature, and are treated specially (as a closed
-%   form of the nodes and weights is available). ALPHA = BETA = 0 calls LEGPTS,
-%   which is a more efficient code.
+%   form expression for the nodes and weights is available). ALPHA = BETA = 0
+%   calls LEGPTS, which is more efficient. The other cases with ALPHA = BETA call
+%   ULTRAPTS, which is also faster.
 % 
-%   When MAX(ALPHA, BETA) > 5 the results may not be accurate. 
+%   When ALPHA ~= BETA and MAX(ALPHA, BETA) > 5 the results may not be accurate. 
 %
-% See also CHEBPTS, LEGPTS, LOBPTS, RADAUPTS, HERMPTS, LAGPTS, and TRIGPTS.
+% See also CHEBPTS, LEGPTS, LOBPTS, RADAUPTS, HERMPTS, LAGPTS, TRIGPTS, and
+% ULTRAPTS.
 
-% Copyright 2015 by The University of Oxford and The Chebfun Developers. See
+% Copyright 2017 by The University of Oxford and The Chebfun Developers. See
 % http://www.chebfun.org/ for Chebfun information.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -58,27 +57,27 @@ method = 'default';
 method_set = 0;
 
 if ( a <= -1 || b <= -1 )
-    error('CHEBFUN:jacpts:sizeAB', 'Alpha and beta must be greater than -1')
-elseif ( max(a, b) > 5 )
+    error('CHEBFUN:jacpts:sizeAB', 'Alpha and beta must be greater than -1.')
+elseif (a~=b && max(a, b) > 5 )
     warning('CHEBFUN:jacpts:largeAB',...
-        'MAX(ALPHA, BETA) > 5. Results may not be accurate')
+        'ALPHA~=BETA and MAX(ALPHA, BETA) > 5. Results may not be accurate.')
 end
 
 
 % Check inputs:
 if ( nargin > 3 )
     if ( nargin == 5 )
-        % Calling sequence = LEGPTS(N, INTERVAL, METHOD)
+        % Calling sequence = JACPTS(N, INTERVAL, METHOD)
         interval = int;
         method = meth;
         method_set = 1;
     elseif ( nargin == 4 )
         if ( ischar(int) )
-            % Calling sequence = LEGPTS(N, METHOD)
+            % Calling sequence = JACPTS(N, METHOD)
             method = int;
             method_set = true;
         else
-            % Calling sequence = LEGPTS(N, INTERVAL)
+            % Calling sequence = JACPTS(N, INTERVAL)
             interval = int;
         end
     end
@@ -119,23 +118,29 @@ elseif ( n == 1 )
 end
 
 % Special cases:
-if ( ~a && ~b )                 % Legendre: alpha = beta = 0
-    [x, w, v] = legpts(n, method);
-    [x, w] = rescale(x, w, interval, a, b);
-    return
-elseif ( a == -.5 && b == -.5 ) % Gauss-Chebyshev: alpha = beta = -.5
-    [x, ignored, v] = chebpts(n, interval, 1);
-    w = repmat(pi/n,1,n);
-    [ignored, w] = rescale(x, w, interval, a, b);
-    return
-elseif ( a == .5 && b == .5 )   % Gauss-Chebyshev2: alpha = beta = .5
-    x = chebpts(n+2, 2);     
-    x = x(2:n+1);
-    w = pi/(n+1)*(1-x.^2).';  
-    v = (1-x.^2);  
-    v(2:2:end) = -v(2:2:end); 
-    [x, w] = rescale(x,w,interval,a,b);
-    return
+if ( a == b )
+    if ( a == 0 )  % Gauss-Legendre: alpha = beta = 0
+        [x, w, v] = legpts(n, method);
+        [x, w] = rescale(x, w, interval, a, b);
+        return
+    elseif ( a == -.5 )  % Gauss-Chebyshev: alpha = beta = -.5
+        [x, ignored, v] = chebpts(n, interval, 1);
+        w = repmat(pi/n,1,n);
+        [ignored, w] = rescale(x, w, interval, a, b);
+        return
+    elseif ( a == .5 )   % Gauss-Chebyshev2: alpha = beta = .5
+        x = chebpts(n+2, 2);
+        x = x(2:n+1);
+        w = pi/(n+1)*(1-x.^2).';
+        v = (1-x.^2);
+        v(2:2:end) = -v(2:2:end);
+        [x, w] = rescale(x,w,interval,a,b);
+        return
+    else % Gauss-Gegenbauer: alpha = beta
+        lambda = a + .5;
+        [x, w, v] = ultrapts(n, lambda, interval);
+        return
+    end
 end
 
 % Choose an algorithm:
@@ -144,39 +149,26 @@ if ( n < 20 || (n < 100 && ~method_set) || strcmpi(method, 'rec') )
     
 elseif ( strcmpi(method, 'GW') )
     [x, w, v] = gw(n, a, b);  % GW  see [1]
-    w = w/sum(w);
     
 else
     [x, w, v] = asy(n, a, b); % HT  see [2]
     
 end
 
-% Compute the constant for weights:
-if ( a && b )
-    if ( n > 50 ) % Use asymptotic approximation:
-        M = min(20, n-1); 
-        C = 1; 
-        phi = -a*b/n;
-        for m = 1:M
-            C = C + phi;
-            phi = -(m+a)*(m+b)/(m+1)/(n-m)*phi;
-            if ( abs(phi/C) < eps/100 )
-                break
-            end
-        end
-        if ( strcmpi(method, 'rec') )
-            C = gamma(2+a) * gamma(2+b) / (gamma(2+a+b)*(a+1)*(b+1));
-            w = w / sum(w);
-        end
-    else
-        C = gamma(n+a+1)*gamma(n+b+1)/gamma(n+a+b+1)/factorial(n);
-    end
-    C = 2^(a+b+1)*C;
-else
-    C = 2^(a+b+1);
-end
+% Compute the constant for the weights:
 if ( ~strcmpi(method,'GW') )
-    w = C*w; 
+    if ( n >= 100 )
+        cte1 = ratioOfGammaFunctions(n+a+1, b);
+        cte2 = ratioOfGammaFunctions(n+1, b);
+        C = 2^(a+b+1)*(cte2/cte1);
+    else
+        C = 2^(a+b+1) * exp( gammaln(n+a+1) - gammaln(n+a+b+1) + ...
+            gammaln(n+b+1) - gammaln(n+1) );   
+        % An alternative approach could be used: 
+        %   C = 2^(a+b+1)*beta(a+1, b+1)/sum(w), 
+        % but we prefer compute the weights independently.
+    end
+    w = C*w;
 end
 
 % Scale the nodes and quadrature weights:
@@ -199,6 +191,27 @@ function [x, w] = rescale(x, w, interval, a, b)
     end
 end
 
+function cte = ratioOfGammaFunctions(m,delta)
+%RATIOGAMMA Compute the ratio gamma(m+delta)/gamma(m). See [2].
+    % cte = gamma(m+delta)/gamma(m)
+    ds = .5*delta^2/(m-1);
+    s = ds;
+    j = 1;
+    while ( abs(ds/s) > eps/100 ) % Taylor series in expansion 
+        j = j+1;
+        ds = -delta*(j-1)/(j+1)/(m-1)*ds;
+        s = s + ds;
+    end
+    p2 = exp(s)*sqrt(1+delta/(m-1))*(m-1)^(delta);
+    % Stirling's series:
+    g = [1, 1/12, 1/288, -139/51840, -571/2488320, 163879/209018880, ...
+        5246819/75246796800, -534703531/902961561600, ...
+        -4483131259/86684309913600, 432261921612371/514904800886784000];
+    f = @(z) sum(g.*[1, cumprod(ones(1, 9)./z)]);
+    cte = p2*(f(m+delta-1)/f(m-1));
+end
+
+
 %% ------------------------- Routines for GW ----------------------------
     
 function [x, w, v] = gw(n, a, b)
@@ -213,8 +226,7 @@ function [x, w, v] = gw(n, a, b)
     TT = diag(bb,1) + diag(aa) + diag(bb,-1); % Jacobi matrix.
     [V, x] = eig( TT );                       % Eigenvalue decomposition.
     x = diag(x);                              % Jacobi points.
-    % Quadrature weights:
-    w = V(1,:).^2*( 2^(ab+1)*gamma(a+1)*gamma(b+1)/gamma(2+ab) ); 
+    w = V(1,:).^2*2^(ab+1)*beta(a+1, b+1);    % Quadrature weights.
     v = sqrt(1-x.^2).*abs(V(1,:))';           % Barycentric weights.
 end
 
@@ -415,33 +427,31 @@ function [vals, ders] = feval_asy1(n, a, b, t, idx, flag)
     cosA = cos(alpha);
     sinA = sin(alpha);
 
-    if ( flag )
+    if ( flag ) % Evaluate cos(alpha) using Taylor series.
+        k = 1:numel(t);
         if ( idx(1) == 1 )
-            k = numel(t):-1:1;
-        else
-            k = 1:numel(t);
+            k = fliplr(k);
         end
-        ta = double(single(t));   
-        tb = t - ta;
-        hi = n*ta;                
-        lo = n*tb + (a+b+1)*.5*t;
-        pia = double(single(pi));
-        pib = -8.742278000372485e-08; %pib = pi - pia;
-        dh = (hi - (k-.25)*pia) + lo - .5*a*pia - (k-.25+.5*a)*pib;
-        tmp = 0;
-        sgn = 1; fact = 1; DH = dh; dh2 = dh.*dh;
+        % Hi-lo computation to squeeze an extra digit in the computation.
+        ta = double(single(t));    tb = t - ta;
+        hi = n*ta;                 lo = n*tb + (a+b+1)*.5*t; 
+        pia = 3.1415927410125732;  pib = -8.742278000372485e-08; % pib = pi-pia;
+        % Doing this means that pi - pia - pib = 10^-24
+        dh = ( hi - (k-.25)*pia ) + lo - .5*a*pia - (k-.25+.5*a)*pib;
+        tmp = 0; sgn = 1; fact = 1; DH = dh; dh2 = dh.*dh;       % Initialise.
         for j = 0:20
             dc = sgn*DH/fact;
             tmp = tmp + dc;
             sgn = -sgn;
             fact = fact*(2*j+3)*(2*j+2);
             DH = DH.*dh2;
-            if ( norm(dc,inf) < eps/2000 )
+            if ( norm(dc, inf) < eps/2000 )
                 break
             end
         end
-        tmp(2:2:end) = -tmp(2:2:end);
-        tmp = sign(cosA(1,2)*tmp(2))*tmp;
+        tmp(2:2:end) = -tmp(2:2:end);          % }
+        [~, loc] = max(abs(tmp));              %  } Fix up the sign.
+        tmp = sign(cosA(1,loc)*tmp(loc))*tmp;  % }
         cosA(1,:) = tmp;
     end
 
@@ -548,22 +558,23 @@ function [x, w, v] = asy2(n, a, b, npts)
 
 % Use Newton iterations to find the first few Bessel roots:
 smallK = min(30, npts);
-jk = besselRoots(a, min(npts, smallK));
+jk = besselroots(a, min(npts, smallK));
 % Use asy formula for larger ones (See NIST 10.21.19, Olver 1974 p247)
 if ( npts > smallK )
     mu = 4*a^2;
     a8 = 8*((length(jk)+1:npts).'+.5*a-.25)*pi;
     jk2 = .125*a8-(mu-1)./a8 - 4*(mu-1)*(7*mu-31)/3./a8.^3 - ...
-          32*(mu-1)*(83*mu.^2-983*mu+3779)/15./a8.^5 - ...
+          32*(mu-1)*(83*mu.^2-982*mu+3779)/15./a8.^5 - ...
           64*(mu-1)*(6949*mu^3-153855*mu^2+1585743*mu-6277237)/105./a8.^7;
     jk = [jk ; jk2];
 end
 jk = real(jk(1:npts));
 
-% Approximate roots via asymptotic formula: (see Olver 1974)
-phik = jk/(n + .5*(a + b + 1));
-t = phik + ((a^2-.25)*(1-phik.*cot(phik))./(8*phik) - ...
-    .25*(a^2-b^2)*tan(.5*phik))/(n + .5*(a + b + 1))^2;
+% Approximate roots via asymptotic formula: (see Olver 1974, NIST, 18.16.8)
+rho = n + .5*(a + b + 1); 
+phik = jk/rho;
+t = phik + ((a^2-.25)*(1-phik.*cot(phik))./(2*phik) - ...
+    .25*(a^2-b^2)*tan(.5*phik))/rho^2;
 
 % Only first half (x > 0):
 if ( any(t > 1.1*pi/2) )
@@ -600,7 +611,6 @@ v = sin(t)./ders;
     % Evaluate the boundary asymptotic formula at x = cos(t).
     
         % Useful constants:
-        rho = n + .5*(a + b + 1); 
         rho2 = n + .5*(a + b - 1);
         A = (.25 - a^2);       
         B = (.25 - b^2);
@@ -665,58 +675,6 @@ v = sin(t)./ders;
 
 end
 
-function jk = besselRoots(nu, m)
-% BESSELROOTS(NU, M) returns the first M roots of besselj(nu, x).
-    
-% Find an approximation:
-jk = zeros(m,1); 
-m1 = 3;
-if ( nu == 0 )
-    xs = 2.404825557695773;
-elseif ( nu > 0 )
-    % See Hethcote 1970:
-    xs = nu + 1.8557*nu^(1/3);
-else
-    nu1 = nu + 1;
-    % See Piessens 1984:
-    xs = 2*sqrt(nu+1)*(1 + nu1/4 - 7*nu1^2/96 + 49*nu1^3/1152 - 8363*nu1/276480);
-    m1 = min(max(2*ceil(abs(log10(nu1))), 3), m);
-end
-
-% The first root:
-jk(1) = besselNewton(nu, xs);
-if ( m == 1 )
-    return
-end
-% The second root:
-jk(2) = besselNewton(nu, jk(1)+.9*pi);
-if ( m == 2) 
-    return
-end
-% Some more roots:
-for k = 3:m1
-    jk(k) = besselNewton(nu, jk(k-1)+.99*pi);
-end
-% The rest
-for k = m1+1:m
-    jk(k) = besselNewton(nu, jk(k-1)+pi);
-end
-
-end
-
-function jk = besselNewton(nu, jk)
-% BESSELNEWTON(NU, JK)   Find roots of Bessel function using Newton iteration.
-
-dx = inf; j = 0;
-while ( dx > sqrt(eps)/1000 && j < 20 )
-    u = besselj(nu, jk, 0);
-    du = besselj(nu-1, jk, 0) - nu/jk*u;
-    dx = u./du;
-    jk = jk - dx;
-    j = j + 1;
-end
-    
-end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % [TODO]: The codes below are only here temporarily.
@@ -851,44 +809,8 @@ K = C*(f.*tB2);
 A3 = .5*(D*tB2) - (.5+alph)*B2 - .5*K;
 A3 = A3 - A3(1);
 
-if ( nargout < 6 )
-    % Make function for output
-    tB1 = @(theta) bary(theta, tB1, t, v);
-    A2 = @(theta) bary(theta, A2, t, v);
-    tB2 = @(theta) bary(theta, tB2, t, v);
-    A3 = @(theta) bary(theta, A3, t, v);
-    return
-end
-
-% A2p:
-A3p = D*A3;
-A3p = A3p - A3p(1);
-A3p_t = A3p./t;
-% Extrapolate point at t = 0:
-w = pi/2-t(2:end);
-w(2:2:end) = -w(2:2:end);
-A3p_t(1) = sum(w.*A3p_t(2:end))/sum(w);
-
-% B2:
-tB3 = -.5*A3p - (.5+alph)*(C*A3p_t) + .5*C*(f.*A3);
-B3 = tB3./t;
-% Extrapolate point at t = 0
-B3(1) = sum(w.*B3(2:end))/sum(w);
-
-% A3:
-K = C*(f.*tB3);
-A4 = .5*(D*tB3) - (.5+alph)*B3 - .5*K;
-A4 = A4 - A4(1);
-
-% Make function for output:
 tB1 = @(theta) bary(theta, tB1, t, v);
 A2 = @(theta) bary(theta, A2, t, v);
 tB2 = @(theta) bary(theta, tB2, t, v);
 A3 = @(theta) bary(theta, A3, t, v);
-tB3 = @(theta) bary(theta, tB3, t, v);
-A4 = @(theta) bary(theta, A4, t, v);
-
 end
-
-
-

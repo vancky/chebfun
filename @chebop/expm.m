@@ -34,7 +34,7 @@ function varargout = expm(N, t, u0, prefs)
 %
 % See also LINOP/EXPM.
 
-% Copyright 2015 by The University of Oxford and The Chebfun Developers. 
+% Copyright 2017 by The University of Oxford and The Chebfun Developers. 
 % See http://www.chebfun.org/ for Chebfun information.
 
 % Grab a preference if not given one:
@@ -52,7 +52,7 @@ if ( fail )
 end
 
 % Determine the discretization:
-prefs = determineDiscretization(N, L, prefs);
+prefs = determineDiscretization(N, length(L.domain), prefs);
 
 % Clear boundary conditions if the dicretization uses periodic functions (since
 % if we're using periodic basis functions, the boundary conditions will be

@@ -11,7 +11,7 @@ function varargout = plotcoeffs( f, varargin )
 %
 % See also PLOTCOEFFS2, COEFFS2.
 
-% Copyright 2015 by The University of Oxford and The Chebfun Developers.
+% Copyright 2017 by The University of Oxford and The Chebfun Developers.
 % See http://www.chebfun.org/ for Chebfun information.
 
 % Empty check.
@@ -27,13 +27,13 @@ rows = f.rows;
 % There are two figures. One plots the PLOTCOEFFS of the column slices and
 % the other the PLOTCOEFFS of the row slices.
 
-figure % First figure plots column slices.
+subplot(1,2,1) % First figure plots column slices.
 h1 = plotcoeffs( cols, varargin{:} ); % PLOTCOEFFS of column slices.
-title('Column slices', 'FontSize', 16)
+title('Column slices')
 
-figure % Second figure plots row slices.
+subplot(1,2,2) % Second figure plots row slices.
 h2 = plotcoeffs( rows, varargin{:} ); % PLOTCOEFFS of row slices.
-title('Row slices', 'FontSize', 16)
+title('Row slices')
  
 % Return plot handles when appropriate.
 if ( nargout == 1 )

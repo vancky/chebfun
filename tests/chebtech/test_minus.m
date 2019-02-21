@@ -73,13 +73,23 @@ for n = 1:2
     pass(n, 16:17) = test_sub_function_and_function(f, f_op, g, g_op, x);
     
     % This should fail with a dimension mismatch error.
+    % (Actually, we can do this in R2016a anda above!)
     g_op = @(x) sin(x);
     g = testclass.make(g_op, [], pref);
-    try
+    try 
         h = f - g; %#ok<NASGU>
         pass(n, 18) = false;
+        if ( verLessThan('matlab', '9.1') )
+            pass(n, 18) = false;
+        else
+            pass(n, 18) = true;
+        end
     catch ME
-        pass(n, 18) = strcmp(ME.message, 'Matrix dimensions must agree.');
+        if ( verLessThan('matlab', '9.1') )
+            pass(n, 18) = strcmp(ME.identifier, 'MATLAB:dimagree');
+        else
+            pass(n, 18) = false;
+        end
     end
     
     %%
@@ -115,7 +125,7 @@ function result = test_sub_function_and_scalar(f, f_op, alpha, x)
     result(1) = isequal(g1, -g2);
     g_exact = @(x) f_op(x) - alpha;
     result(2) = norm(feval(g1, x) - g_exact(x), inf) <= ...
-        10*max(g1.vscale.*g1.epslevel);
+        10*max(vscale(g1)*eps);
 end
 
 % Test the subraction of two CHEBTECH objects F and G, specified by F_OP and
@@ -127,6 +137,6 @@ function result = test_sub_function_and_function(f, f_op, g, g_op, x)
     h_exact = @(x) f_op(x) - g_op(x);
     norm(feval(h1, x) - h_exact(x), inf);
     result(2) = norm(feval(h1, x) - h_exact(x), inf) <= ...
-        1e4*max(h1.vscale.*h1.epslevel);
+        1e4*max(vscale(h1)*eps);
     
 end

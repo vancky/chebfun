@@ -15,7 +15,7 @@ function varargout = svd( f )
 %   RANK(F) is the number of significant singular values of F. The relation
 %   RANK(F) <= LENGTH(F) should always hold.
 
-% Copyright 2015 by The University of Oxford and The Chebfun Developers.
+% Copyright 2017 by The University of Oxford and The Chebfun Developers.
 % See http://www.chebfun.org/ for Chebfun information.
 
 % Empty check:
@@ -42,8 +42,8 @@ height = diff( dom( 3:4 ) );
 if ( norm( d ) == 0 )
     if ( nargout > 1 )
         f = 1 + 0*f;
-        U = 1/sqrt( width )*simplify(f.cols);
-        V = 1/sqrt( height )*simplify(f.rows);
+        U = 1/sqrt( width )*simplify(f.cols, [], 'globaltol');
+        V = 1/sqrt( height )*simplify(f.rows, [], 'globaltol');
         varargout = { U, 0, V };
     else
         varargout = { 0 };

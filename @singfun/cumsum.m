@@ -13,7 +13,7 @@ function g = cumsum(f, dim)
 %
 % See also SUM.
 
-% Copyright 2015 by The University of Oxford and The Chebfun Developers.
+% Copyright 2017 by The University of Oxford and The Chebfun Developers.
 % See http://www.chebfun.org/ for Chebfun information.
 
 % [TODO]: Improvement on the algorithm to handle the case with singularities at
@@ -164,29 +164,28 @@ function g = singIntegral(f)
     
     % Construct the SINGFUN object of the solution:
     g = singfun;
-    tol = get(f, 'epslevel').*get(f, 'vscale');
+    tol = eps*get(f, 'vscale');
     if ( abs(ra - a) > tol ) 
         % No log term: fractional poles, fractional roots, or integer roots:
         CM = Cm/(ra - a);
-        if ( iszero(u) && abs(CM) > tol*f.smoothPart.vscale )
+        if ( iszero(u) && abs(CM) > tol*vscale(f.smoothPart) )
             g.smoothPart = f.smoothPart.make(@(x) CM + 0*x);
             g.exponents = [ra - a 0];
         elseif ( ~iszero(u) && abs(CM) < tol )
-            [u, rootsLeft, ignored] = extractBoundaryRoots(u);
             g.smoothPart = u;
-            g.exponents = [exps(1)+rootsLeft 0];
+            g.exponents = exps;
+            g = extractBoundaryRoots(g, [1 ; 0]);            
         else % The general case that both terms are non-trivial
             g.smoothPart = u + CM*xa;
-            [g.smoothPart, rootsLeft, ignored] = ...
-                extractBoundaryRoots(g.smoothPart);
-            g.exponents = [exps(1)+rootsLeft 0];
+            g.exponents = exps;
+            g = extractBoundaryRoots(g, [1 ; 0]);
         end
         
     elseif ( abs(Cm) < tol )
         % No log term: fractional poles with non-constant smooth part:
-        [u, rootsLeft, ignored] = extractBoundaryRoots(u);
         g.smoothPart = u;
-        g.exponents = [exps(1)+rootsLeft 0];
+        g.exponents = exps;
+        g = extractBoundaryRoots(g, [1 ; 0]);
     else
         % Log term: integer poles with constant or non-constant smooth part:
         % [TODO]: Construct a representation of log.

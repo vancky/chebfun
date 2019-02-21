@@ -8,7 +8,6 @@ function out = get(f, prop, simpLevel)
 %       'vscale'         - Vertical scale of F.
 %       'vscale-local'   - Local vertical scales of F.
 %       'hscale'         - Horizontal scale of F.
-%       'hscale-local'   - Local horizontal scales of F.
 %       'ishappy'        - Is F happy?
 %       'lval'           - Value(s) of F at left-hand side of domain.
 %       'rval'           - Value(s) of F at right-hand side of domain.
@@ -84,7 +83,7 @@ function out = get(f, prop, simpLevel)
 %
 %   The default value of SIMPLEVEL is 2.
 
-% Copyright 2015 by The University of Oxford and The Chebfun Developers.
+% Copyright 2017 by The University of Oxford and The Chebfun Developers.
 % See http://www.chebfun.org/ for Chebfun information.
 
 % Try to simplify the output as much as possible by default.
@@ -99,11 +98,6 @@ switch prop
         out = vscale(f);
     case 'hscale'
         out = hscale(f);
-    case 'epslevel'
-        warning('CHEBFUN:CHEBFUN:get:epslevel', ...
-            ['f.epslevel and get(f,''epslevel'') now always returns machine\n'...
-            'epsilon, and is likely to be removed from Chebfun in the future.'])
-        out = epslevel(f);
     case 'ishappy'
         out = ishappy(f);
     case fieldnames(f)
@@ -126,10 +120,6 @@ switch prop
         out = getSimpleNumericLocalProp(f, 'rval', simpLevel);
     case 'vscale-local'
         out = getSimpleNumericLocalProp(f, 'vscale', simpLevel);
-    case 'hscale-local'
-        out = getSimpleNumericLocalProp(f, 'hscale', simpLevel);
-    case 'epslevel-local'
-        out = getSimpleNumericLocalProp(f, 'epslevel', simpLevel);
     case {'values', 'coeffs', 'points'}
         out = getSimpleNumericLocalProp(f, prop, simpLevel);
     case {'exps', 'exponents'}

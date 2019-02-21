@@ -17,17 +17,17 @@ q = chebfun(@(x) exp(cos(3*x)), [-1 1]);
 %% 1. Test the commutativity.
 H1 = conv(f, g);
 H2 = conv(g, f);
-pass(1) = norm(H1 - H2) < 100*epslevel(H1);
+pass(1) = norm(H1 - H2) < 100*eps;
 
 %% 2. Test the associativity.
 H1 = conv(conv(f, g), h);
 H2 = conv(f, conv(g, h));
-pass(2) = norm(H1 - H2) < 100*epslevel(H1);
+pass(2) = norm(H1 - H2) < 100*eps;
 
 %% 3. Test the distributivity.
 H1 = conv(f, (p + q));
 H2 = conv(f, p) + conv(f, q);
-pass(3) = norm(H1 - H2) < 100*epslevel(H1);
+pass(3) = norm(H1 - H2) < 100*eps;
 
 %% 4. Test B-splines.
 % Generates piecewise polynomial cardinal B-splines by a process of
@@ -43,7 +43,7 @@ f = s;
 for k = 1:3
     f = conv(f, s);
 end
-pass(4) = norm(f - B) < 100*epslevel(f)*vscale(f);
+pass(4) = norm(f - B) < 100*eps*vscale(f);
 
 %% 5. Test more splines.
 f = chebfun(1/2); 
@@ -51,7 +51,7 @@ g = f;
 for j = 2:4
     g = conv(f, g);
 end
-pass(5) = abs(feval(g, 1) - 23/96) < 100*epslevel(g);
+pass(5) = abs(feval(g, 1) - 23/96) < 100*eps;
 
 %% 6. Test the example from the HELP text:
 f = chebfun(1/2); g = f;
@@ -73,8 +73,8 @@ t = 1e-7;
 f = chebfun(@(x) exp(-x.^2/(4*t))/sqrt(4*pi*t),.003*[-1 1]);
 h = conv(f, g);
 err = abs(norm(h,2) - 0.029781437647379);
-tol = 10*max(get(f, 'vscale')*get(f, 'epslevel'), ...
-    get(g, 'epslevel')*get(g, 'vscale'));
+tol = 10*max(get(f, 'vscale')*eps, ...
+    eps*get(g, 'vscale'));
 pass(7) = err < tol;
 
 %% An Example due to Mohsin Javed:
@@ -82,8 +82,8 @@ f = chebfun(@(x) x, [-1.5 0] );
 g = chebfun(@(x) sin(x), [-1 1]);
 h1 = conv(f, g);
 h2 = conv(f, g, 'old');
-tol = 10*max(get(f, 'vscale')*get(f, 'epslevel'), ...
-    get(g, 'epslevel')*get(g, 'vscale'));
+tol = 10*max(get(f, 'vscale')*eps, ...
+    eps*get(g, 'vscale'));
 pass(8) = norm(h1 - h2, inf) < tol;
 
 %% Testing Delta function convolution
@@ -130,7 +130,6 @@ g5 = conv(fX2, fX3);
 g6 = conv(g5, fX1);
 pass(13) = normest( g2 - g6 ) < 1e1*tol; 
 
-
 %% test 'same' option
 f = chebfun(@(x) exp(-x.^2), [-10 10]);
 g = chebfun(@(x) exp(-x.^2), [-20 20]);
@@ -139,6 +138,26 @@ pass(14) = norm(h.domain([1, end]) - [-10 10], inf) < eps*10;
 
 h = conv(f, g, 'same');
 pass(15) = norm(h.domain([1, end]) - [-10 10], inf) < eps*10;
+
+%% test quasimatrix option
+f = chebfun(@sin);
+g = chebfun(@cos);
+fg = [f g];
+gg = [g g];
+h1 = conv(fg, gg);
+h2 = [conv(f,g), conv(g,g)];
+pass(16) = norm(h1 - h2) < eps*10;
+
+ffg = conv([f f],g);
+fgg = conv(f,[g g]);
+pass(17) = norm(ffg-fgg) < 10*eps;
+
+cheb.x;
+phi = @(t) chebfun(@(x) exp(-x^2/(4*t))/sqrt(4*pi*t));
+f = 1 - 0.2*x - abs(x-0.2);
+fsmooth = conv(f,phi(1e-4),'same');
+pass(18) = norm(f-fsmooth) < .01;
+
 
 end
 

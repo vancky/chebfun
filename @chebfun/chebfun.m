@@ -107,7 +107,7 @@ classdef chebfun
 %
 % See also CHEBFUNPREF, CHEBPTS.
 
-% Copyright 2015 by The University of Oxford and The Chebfun Developers.
+% Copyright 2017 by The University of Oxford and The Chebfun Developers.
 % See http://www.chebfun.org/ for Chebfun information.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -246,196 +246,6 @@ classdef chebfun
     end
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    %% CLASS METHODS:
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    methods ( Access = public, Static = false )
-
-        % Absolute value of a CHEBFUN.
-        f = abs(f, pref)
-        
-        % True if any element of a CHEBFUN is a nonzero number, ignoring NaN.
-        a = any(f, dim)
-        
-        % Compute the length of the arc defined by a CHEBFUN.
-        out = arcLength(f, a, b)
-        
-        % Solve boundary value problems for ODEs by collocation.
-        [y, t] = bvp4c(fun1, fun2, y0, varargin);
-        
-        % Solve boundary value problems for ODEs by collocation.
-        [y, t] = bvp5c(fun1, fun2, y0, varargin);
-        
-        % Round a CHEBFUN towards plus infinity.
-        g = ceil(f)
-        
-        % Plot information regarding the representation of a CHEBFUN object:
-        h = plotcoeffs(f, varargin);
-
-        % Construct complex CHEBFUN from real and imaginary parts.
-        C = complex(A, B)
-
-        % Compose CHEBFUN objects with another function.
-        h = compose(f, op, g, pref)
-        
-        % Complex conjugate of a CHEBFUN.
-        f = conj(f)
-        
-        % Complex transpose of a CHEBFUN.
-        f = ctranspose(f)
-        
-        % Display a CHEBFUN object.
-        display(f);
-
-        % Evaluate a CHEBFUN.
-        y = feval(f, x, varargin)
-        
-        % Round a CHEBFUN towards zero.
-        g = fix(f);
-        
-        % Round a CHEBFUN towards minus infinity.
-        g = floor(f);
-        
-        % Fractional derivative of a CHEBFUN object:
-        f = fracDiff(f, mu, type)
-        
-        % Fractional integral of a CHEBFUN object:
-        f = fracInt(f, mu)
-
-        % Get properties of a CHEBFUN object.
-        out = get(f, prop, simpLevel);
-        
-        % Horizontal scale of a CHEBFUN object.
-        out = hscale(f);
-
-        % Imaginary part of a CHEBFUN.
-        f = imag(f)
-        
-        % True for an empty CHEBFUN.
-        out = isempty(f)
-
-        % Test if CHEBFUN objects are equal.
-        out = isequal(f, g)
-
-        % Test if a CHEBFUN is bounded.
-        out = isfinite(f)
-        
-        % Test if a CHEBFUN is unbounded.
-        out = isinf(f)
-
-        % Test if a CHEBFUN has any NaN values.
-        out = isnan(f)
-        
-        % True for real CHEBFUN.
-        out = isreal(f);
-        
-        % Test if a CHEBFUN object is built upon DELTAFUN.
-        out = isdelta(f);
-        
-        % Test if a CHEBFUN object is built upon SINGFUN.
-        out = issing(f)
-        
-        % Test if a CHEBFUN object is built upon a basis of periodic 
-        % functions, i.e., a periodic TECH.
-        out = isPeriodicTech(f)
-        
-        % True for zero CHEBFUN objects.
-        out = iszero(f)
-        
-        % Kronecker product of two CHEBFUN object.
-        out = kron(f, g, varargin)
-        
-        % Length of a CHEBFUN.
-        [out, out2] = length(f);
-        
-        % Return Legendre coefficients of a CHEBFUN.
-        c_leg = legpoly(f, n)
-        
-        % Plot a CHEBFUN object on a loglog scale:
-        h = loglog(f, varargin);
-        
-        % Subtraction of two CHEBFUN objects.
-        f = minus(f, g)
-        
-        % Multiplication of CHEBFUN objects.
-        f = mtimes(f, c)
-        
-        % Remove unnecessary breakpoints in from a CHEBFUN.
-        [f, mergedPts] = merge(f, index, pref)
-        
-        % Overlap the domain of two CHEBFUN objects.
-        [f, g] = overlap(f, g)
-        
-        % Solve a PDE with CHEBFUN and ODE15S.
-        varargout = pde15s(varargin);
-        
-        % Solve a PDE with CHEBFUN and ODE23T.
-        varargout = pde23t(varargin);
-        
-        % Plot a CHEBFUN object:
-        varargout = plot(f, varargin);
-        
-        % 3-D plot for CHEBFUN objects.
-        varargout = plot3(f, g, h, varargin)
-        
-        % Power of a CHEBFUN
-        f = power(f, b, pref);
-        
-        % Real part of a CHEBFUN.
-        f = real(f)
-        
-        % Restrict a CHEBFUN object to a subdomain.
-        f = restrict(f, newDomain);
-
-        % The roots of the CHEBFUN F.
-        r = roots(f, varargin);
-        
-        % Round a CHEBFUN towards nearest integer.
-        g = round(f)
-
-        % Plot a CHEBFUN object on a log-linear scale:
-        h = semilogx(f, varargin);
-
-        % Plot a CHEBFUN object on a linear-log scale:
-        h = semilogy(f, varargin);
-        
-        % Signum of a CHEBFUN.
-        f = sign(f, pref)
-        
-        % Simplify the representation of a CHEBFUN object.
-        f = simplify(f, tol);
-
-        % Size of a CHEBFUN object.
-        [s1, s2] = size(f, dim);
-
-        % Square root of a CHEBFUN.
-        f = sqrt(f, pref)
-        
-        % Retrieve and modify preferences for this class.
-        varargout = subsref(f, index);
-
-        % Retrieve and modify preferences for this class.
-        varargout = subsasgn(f, varargin);
-        
-        % CHEBFUN multiplication.
-        f = times(f, g, varargin)
-        
-        % Transpose a CHEBFUN.
-        f = transpose(f)
-        
-        % Truncate a CHEBFUN object.
-        f = truncate(f, n);
-        
-        % Unary minus of a CHEBFUN.
-        f = uminus(f)
-
-        % Unary plus of a CHEBFUN.
-        f = uplus(f)
-        
-        % Vertical scale of a CHEBFUN object.
-        out = vscale(f, s);
-    end
-    
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %% HIDDEN METHODS:
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     methods ( Hidden = true, Static = false )
@@ -461,17 +271,20 @@ classdef chebfun
         % Supply new definition for a CHEBFUN at a point or set of points.
         f = definePoint(f, s, v)
         
+        % Function used for deflation, wrapper for CHEBMATRIX/DEFLATIONFUN.
+        out = deflationFun(Nu, u, r, p, alp, type)
+        
         % Multiplication operator.
         M = diag(f)
+        
+        % Dimension check based on Matlab version
+        out = dimCheck(f, g)
 
         % Useful information for DISPLAY.
         [name, data] = dispData(f)
         
         % Compare domains of two CHEBFUN objects.
         pass = domainCheck(f, g);        
-        
-        % Accuracy estimate of a CHEBFUN object.
-        out = epslevel(f, flag);
 
         % Extract columns of an array-valued CHEBFUN object.
         f = extractColumns(f, columnIndex);
@@ -499,9 +312,12 @@ classdef chebfun
         
         % Deprecated function.
         varargin = quad(varargout);
+
+        % Sample a CHEBFUN on an "appropriate" grid.
+        varargout = sample(f, n);
         
-        % Set pointValues property:
-        f = setPointValues(f, j, k, vals)
+        % Reset pointValues property to the average of left and right limits.
+        f = resetPointValues(f);
         
         % Remove all-zero layers of higher-order impulses.
         f = tidyImpulses(f)
@@ -545,12 +361,21 @@ classdef chebfun
         
         % Interpolate data:
         f = interp1(x, y, method, dom);
+        
+        % Inverse nonuniform fast Fourier transform: 
+        [y, p] = inufft( varargin );
 
         % Compute Lagrange basis functions for a given set of points.
         f = lagrange(x, varargin);
         
         % Non-uniform discrete cosine transform:
         y = ndct(u);
+        
+        % Non-uniform fast Fourier transform: 
+        [y, p] = nufft( varargin );
+        
+        % Two-dimensional NUFFT: 
+        f = nufft2( varargin ); 
 
         % ODE113 with CHEBFUN output.
         [t, y] = ode113(varargin);
@@ -585,6 +410,12 @@ classdef chebfun
         
         % Which interval is a point in?
         out = whichInterval(dom, x, direction);
+
+        % Like built-in UNION but with a tolerance for checking equality.
+        C = tolUnion(A, B, tol);
+
+        % Like built-in UNIQUE but with a tolerance for checking equality.
+        C = tolUnique(A, tol);
         
     end
 
@@ -597,12 +428,14 @@ classdef chebfun
         [funs, ends] = constructor(op, domain, data, pref);
         
         % Convert ODE solutions into CHEBFUN objects:
-        [y, t] = odesol(sol, dom, opt);
+        [t, y] = odesol(sol, dom, opt);
+        
+        % Call one of the MATLAB ODE solvers and return a CHEBFUN
+        [t, y] = constructODEsol(solver, odefun, tspan, uinit, varargin);
         
         % Parse inputs to PLOT. Extract 'lineWidth', etc.
         [lineStyle, pointStyle, jumpStyle, deltaStyle, out] = ...
             parsePlotStyle(varargin)
-
     end
 
 end
@@ -699,6 +532,7 @@ function [op, dom, data, pref, flags] = parseInputs(op, varargin)
     isPeriodic = false;
     vectorize = false;
     doVectorCheck = true;
+    
     while ( ~isempty(args) )
         if ( isstruct(args{1}) || isa(args{1}, 'chebfunpref') )
             % Preference object input.  (Struct inputs not tied to a keyword
@@ -724,6 +558,10 @@ function [op, dom, data, pref, flags] = parseInputs(op, varargin)
             % Vector check for function_handles.
             doVectorCheck = false;
             args(1) = [];
+        elseif ( strcmpi(args{1}, 'vectorcheck') )
+            % Vector check for function_handles.
+            doVectorCheck = strcmpi(args{2}, 'on');
+            args(1:2) = [];            
         elseif ( strcmpi(args{1}, 'doublelength') )
             % Construct Chebfun twice as long as usually would be constructed.
             flags.doubleLength = true;
@@ -823,6 +661,10 @@ function [op, dom, data, pref, flags] = parseInputs(op, varargin)
                 keywordPrefs.techPrefs.refinementFunction = 'nested';
             end
             args(1:2) = [];
+        elseif ( any(strcmpi(args{1}, 'eps')) )
+            % Translate "eps" --> "techPrefs.chebfuneps".
+            keywordPrefs.techPrefs.chebfuneps = args{2};
+            args(1:2) = [];
         elseif ( strcmpi(args{1}, 'maxdegree') )
             % Translate "maxdegree" --> "techPrefs.maxLength".
             keywordPrefs.techPrefs.maxLength = args{2};
@@ -855,7 +697,26 @@ function [op, dom, data, pref, flags] = parseInputs(op, varargin)
             end
         end
     end
-
+    
+    % Construction from equispaced data requires the number of points to be
+    % specified
+    if ( ~isnumeric(op) && isfield(keywordPrefs, 'enableFunqui') && ...
+            (~isfield(keywordPrefs, 'techPrefs') || ...
+            (isfield(keywordPrefs, 'techPrefs') && ...
+            ~isfield(keywordPrefs.techPrefs,'fixedLength'))) )
+        error('CHEBFUN:CHEBFUN:parseInputs:equi', ...
+            '''equi'' flag requires the number of points to be specified.');
+    end
+    
+    % It doesn't make sense to construct from values and coeffs at the same
+    % time.
+    if ( iscell(op) && iscell(op{1}) && isfield(keywordPrefs, 'tech') && ...
+            ~isempty(keywordPrefs.tech) )
+        error('CHEBFUN:CHEBFUN:parseInputs:coeffschebkind', ...
+            [' ''coeffs'' and ''chebkind'' should not be ' ...
+            'specified simultaneously.']);
+    end
+    
     % Override preferences supplied via a preference object with those supplied
     % via keyword.
     if ( prefWasPassed )
@@ -918,6 +779,9 @@ function [op, dom, data, pref, flags] = parseInputs(op, varargin)
             op = vectorCheck(op, dom, vectorize);
         end
         if ( isa(op, 'chebfun') )
+            if ( op.isTransposed )
+                op = op';
+            end
             op = @(x) feval(op, x);
         end
         if ( isa(op, 'function_handle') && pref.enableFunqui )
@@ -981,24 +845,14 @@ end
 function op = vectorCheck(op, dom, vectorize)
 %VECTORCHECK   Try to determine whether op is vectorized. 
 %   It's impossible to cover all eventualities without being too expensive. 
-%   We do the best we can. "Do. Or do no. There is not try."
+%   We do the best we can.
+
+y = dom([1 end]); y = y(:);
 
 % Make a slightly narrower domain to evaluate on. (Endpoints can be tricky).
-y = dom([1 end]);
-
-if ( y(1) > 0 )
-    y(1) = 1.01*y(1); 
-else
-    y(1) = .99*y(1); 
-end
-
-if ( y(end) > 0 )
-    y(end) = .99*y(end); 
-else
-    y(end) = 1.01*y(end); 
-end
-
-y = y(:);
+% This used to be fixed at 0.01. But this can cause troubles at very narrow
+% domains, where 1.01*y(1) might actually be larger than y(end)!
+y = y + [1;-1].*diff(y)/200;
 
 if ( vectorize )
     op = vec(op, y(1));
@@ -1017,16 +871,24 @@ try
         % Here things seem OK! 
         
         % However, we may possibly be fooled if we have an array-valued function
-        % whose number of columns equals the number of test points(i.e., 2). We
-        % choose one additional point as a final check:
+        % whose number of columns equals the number of test points(i.e., 2) or 
+        % something unvectorized like sin(x)/x (no dot). We choose one 
+        % additional point as a final check:
         if ( sv(2) == sy(1) )
             v = op(y(1));
             if ( size(v, 1) > 1 )
                 op = @(x) op(x).';
-                warning('CHEBFUN:CHEBFUN:vectorCheck:transpose',...
+                warning('CHEBFUN:CHEBFUN:vectorCheck:transpose', ...
                     ['Chebfun input should return a COLUMN array.\n', ...
                      'Attempting to transpose.'])
+            elseif ( size(v, 2) ~= sv(2) )
+                % It doesn't really matter what this error message is as it will
+                % be caught in the try-catch statement.
+                error('CHEBFUN:CHEBFUN:vectorCheck:numColumns', ...
+                    'Number of columns increases with length(x).');
+                
             end
+                
         end
         
     elseif ( all( sv == 1 ) )
@@ -1045,12 +907,17 @@ try
             end
         end
         
-        % Try and transpose:
-        op = @(x) op(x).';
-        warning('CHEBFUN:CHEBFUN:vectorCheck:transpose',...
-                ['Chebfun input should return a COLUMN array.\n', ...
-                 'Attempting to transpose.'])
-             
+        if (size(op(y), 1) > 1)
+            % Try and transpose:
+            op = @(x) op(x).';
+            warning('CHEBFUN:CHEBFUN:vectorCheck:transpose', ...
+                    ['Chebfun input should return a COLUMN array.\n', ...
+                    'Attempting to transpose.'])
+        else
+            % Try and vectorize:
+            op = vectorCheck(op, dom, 1);
+        end
+
     elseif ( any(sv == 1) )
         % The operator always returns a scalar:
         op = @(x) repmat(op(x), length(x), 1);
@@ -1065,15 +932,8 @@ catch ME
         rethrow(ME)
         
     else
-        % Try vectorizing.
+        % Try vectorizing. (This is now done silently.)
         op = vectorCheck(op, dom, 1);
-        warning('CHEBFUN:CHEBFUN:vectorcheck:vectorize',...
-        ['Function failed to evaluate on array inputs.\n',...
-        'Vectorizing the function may speed up its evaluation\n',...
-        'and avoid the need to loop over array elements.\n',...
-        'Use ''vectorize'' flag in the CHEBFUN constructor call\n', ...
-        'to avoid this warning message.'])
-    
     end
     
 end

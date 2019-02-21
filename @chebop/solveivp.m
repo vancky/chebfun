@@ -17,9 +17,10 @@ function varargout = solveivp(N, rhs, pref, varargin)
 %
 %   If successful, the solution returned, U, is a CHEBFUN if N specifies a
 %   scalar problem, and a CHEBMATRIX if N specifies a coupled systems of
-%   ordinary differential equations. This method solves both linear and
-%   nonlinear problems be automatically converting them to a coupled first-order
-%   system, which can then be solved using MATLAB's built in solvers.
+%   ordinary differential equations. See note below on how to call the method
+%   with multiple outputs. This method solves both linear and nonlinear problems
+%   be automatically converting them to a coupled first-order system, which can
+%   then be solved using MATLAB's built in solvers.
 %
 %   U = SOLVEIVP(N, RHS, PREF) is the same as above, using the preferences
 %   specified by the CHEBOPPREF variable PREF.
@@ -29,6 +30,10 @@ function varargout = solveivp(N, rhs, pref, varargin)
 %   process. The fields of INFO are as follows (more may be added in future
 %   versions):
 %       SOLVER: The MATLAB solver used when solving the problem.
+%
+%   [U, V, ...] = SOLVEBVP(N, ...), where N specifies a coupled system of ODEs,
+%   returns CHEBFUNs U, V, ... for individual solution components, rather than a
+%   CHEBMATRIX.
 %
 %
 %   Note 1: CHEBOP allows the RHS of coupled system of ODEs to be a scalar,
@@ -59,7 +64,7 @@ function varargout = solveivp(N, rhs, pref, varargin)
 % See also: CHEBOP, CHEBOP/MLDIVIDE, CHEBOPPREF, CHEBOP/SOLVEBVP,
 % CHEBFUN/ODE113, CHEBFUN/ODE15S, CHEBFUN/ODE45, CHEBFUN/ODESOL, TREEVAR. 
 
-% Copyright 2015 by The University of Oxford and The Chebfun Developers.
+% Copyright 2017 by The University of Oxford and The Chebfun Developers.
 % See http://www.chebfun.org/ for Chebfun information.
 
 % Developer note:
@@ -102,12 +107,28 @@ if ( ~all(isfinite(N.domain)) )
         'Solving IVPs on unbounded intervals is not supported.');
 end
 
+% What solver do we want to use for the IVP?
+solver = pref.ivpSolver;
+
 % If pref.ivpSolver is set to a global method, we really should be calling
 % CHEBOP/SOLVEBVP():
-if ( isempty(strfind(func2str(pref.ivpSolver), 'chebfun.ode')) )
+if ( strcmp(solver, 'values') || strcmp(solver, 'coeffs') || ...
+        isempty(strfind(func2str(solver), 'chebfun.ode')) )
     [varargout{1:nargout}] = solvebvp(N, rhs, pref, varargin{:});
     info.solver = 'Global method';
     return
+end
+
+% Find out how many variables N operates on:
+nVars = numVars(N);
+
+% Check if we're working with a CHEBMATRIX syntax, e.g.
+%   @(x,u) [diff(u{1}) + u{2}; ...]
+% as we'll need different feval calls if that's the case.
+if ( nargin(N) == 2 && nVars > 1 )
+    cellArg = 1;
+else
+    cellArg = 0;
 end
 
 %% Convert to a first-order system
@@ -118,7 +139,7 @@ end
 % encounters unsupported methods.
 try
     [anonFun, varIndex, problemDom, coeffs, diffOrders] = ...
-        treeVar.toFirstOrder(N.op, rhs, N.domain);
+        treeVar.toFirstOrder(N.op, rhs, N.domain, nVars, cellArg);
 catch ME
     % Did we encounter an unsupported method? If so, try to solve it globally:
     if ( ~isempty(regexp(ME.identifier, 'CHEBFUN:TREEVAR:.+:notSupported', ...
@@ -144,10 +165,17 @@ cheb0 = chebfun(@(x) 0*x, dom);
 % Evaluate N.LBC or N.RBC:
 if ( ~isempty(N.lbc) )
     % Create enough copies to allow to evaluate the initial condition for
-    % systems:
-    cheb0 = repmat({cheb0}, nargin(N.lbc), 1);
-    % Evaluate the initial condition:
-    bcEvalFun = N.lbc(cheb0{:});
+    % systems. We use the DIFFORDER variable from the first order conversion
+    % above for giving us information about the number of variables in the
+    % problem:
+    cheb0 = repmat({cheb0}, length(diffOrders), 1);
+    % Evaluate the initial condition, depending on whether we're dealing with
+    % CHEBMATRIX syntax or not:
+    if ( cellArg && nargin(N.lbc) == 1 )
+       bcEvalFun = N.lbc(cheb0); 
+    else
+        bcEvalFun = N.lbc(cheb0{:});
+    end
     % Store the point at which the initial condition is evaluated (left
     % endpoint):
     evalPoint = dom(1);
@@ -158,9 +186,14 @@ if ( ~isempty(N.lbc) )
 else
     % Create enough copies to allow to evaluate the initial condition for
     % systems:
-    cheb0 = repmat({cheb0}, nargin(N.rbc), 1);
-    % Evaluate the final condition:
-    bcEvalFun = N.rbc(cheb0{:});
+    cheb0 = repmat({cheb0}, length(diffOrders), 1);
+    % Evaluate the final condition, depending on whether we're dealing with
+    % CHEBMATRIX syntax or not:
+    if ( cellArg && nargin(N.rbc) == 1 )
+       bcEvalFun = N.rbc(cheb0); 
+    else
+        bcEvalFun = N.rbc(cheb0{:});
+    end
     % Store the point at which the final condition is evaluated (right
     % endpoint):
     evalPoint = dom(end);
@@ -226,11 +259,26 @@ initVals = initVals(idx);
 % Create an ODESET struct for specifying tolerance:
 opts = odeset('absTol', pref.ivpAbsTol, 'relTol', pref.ivpRelTol);
 
-% What solver do we want to use for the IVP?
-solver = pref.ivpSolver;
-
 % What happiness check do we want to use for the IVP?
 opts.happinessCheck = pref.happinessCheck;
+
+% Do we want to restart the solver at breakpoints?
+opts.restartSolver = pref.ivpRestartSolver;
+
+% Break out of solver if solution exceeds maximum norm?
+maxNorm = N.maxnorm;
+
+% TODO: Should just need this in case opts.Events is not Inf. Move to end of
+% file?
+    function [position,isterminal,direction] = applyEventsFcn(t,y)
+        position = abs(y(varIndex))-maxNorm(:); % The value that we want to be zero
+        isterminal = 1+0*maxNorm;  % Halt integration in call cases
+        direction = 0;   % The zero can be approached from either direction
+    end
+
+if ( ~isempty(maxNorm) && ~all(isinf(maxNorm) ))
+    opts.Events = @applyEventsFcn;
+end
 
 % Solve!
 [t, y]= solver(anonFun, odeDom, initVals, opts);

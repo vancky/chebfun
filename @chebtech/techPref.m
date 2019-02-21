@@ -13,7 +13,7 @@ function outPref = techPref(inPref)
 %
 %   ABSTRACT PREFERENCES REQUIRED OF ALL TECHS
 %
-%     eps          - Relative tolerance used in construction and subsequent
+%     chebfuneps          - Relative tolerance used in construction and subsequent
 %      [2^-52]       operations.  See CHEBTECH.HAPPINESSCHECK for more details.
 %
 %     maxLength    - Maximum number of points used by the constructor.
@@ -32,10 +32,6 @@ function outPref = techPref(inPref)
 %                    minimize the risk of missing signals between grid
 %                    points.
 %       false      - Do not test.
-%
-%     sampleTestEps  - Relative tolerance used for sample test. Its default
-%                      value is set same as eps, i.e. 2^-52, which can be
-%                      loosen for a certain construction process, e.g. singfun.
 %
 %   CHEBTECH-SPECIFIC PREFERENCES
 %
@@ -57,16 +53,15 @@ function outPref = techPref(inPref)
 %
 % See also CHEBTECH, CHEBTECH1, CHEBTECH2
 
-% Copyright 2015 by The University of Oxford and The Chebfun Developers.
+% Copyright 2017 by The University of Oxford and The Chebfun Developers.
 % See http://www.chebfun.org/ for Chebfun information.
 
-outPref.eps                = 2^-52;
+outPref.chebfuneps         = 2^-52;
 outPref.minSamples         = 17;
 outPref.maxLength          = 2^16 + 1;
 outPref.fixedLength        = NaN;
 outPref.extrapolate        = false;
 outPref.sampleTest         = true;
-outPref.sampleTestEps      = outPref.eps;
 outPref.refinementFunction = 'nested';
 outPref.happinessCheck     = 'standard';
 outPref.useTurbo           = false;

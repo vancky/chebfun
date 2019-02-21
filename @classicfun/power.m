@@ -16,13 +16,13 @@ function f = power(f, b)
 %
 % See also SQRT.
 
-% Copyright 2015 by The University of Oxford and The Chebfun Developers. 
+% Copyright 2017 by The University of Oxford and The Chebfun Developers. 
 % See http://www.chebfun.org/ for Chebfun information.
 
 % If there are roots at the end of the domain, then make the f.onefun a singfun:
-lval = get(f, 'lval');                          % Value at left of domain.
-rval = get(f, 'rval');                          % Value at right of domain.
-tol = 1e3*get(f, 'epslevel').*get(f, 'vscale'); % Tolerance for a root.
+lval = get(f, 'lval');           % Value at left of domain.
+rval = get(f, 'rval');           % Value at right of domain.
+tol = 1e3*eps*get(f, 'vscale'); % Tolerance for a root.
 if ( any(abs(lval) < tol) || any(abs(rval) < tol) ) && ...
         ( ~isa(f.onefun, 'singfun') )
     f.onefun = singfun(f.onefun);               % Cast f.onefun to a SINGFUN.

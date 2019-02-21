@@ -28,7 +28,7 @@ function out = sum(F, a, b)
 %
 % See also CUMSUM, DIFF.
 
-% Copyright 2015 by The University of Oxford and The Chebfun Developers.
+% Copyright 2017 by The University of Oxford and The Chebfun Developers.
 % See http://www.chebfun.org/ for Chebfun information.
 
 % Integrate in the continuous dimension by default.
@@ -76,6 +76,10 @@ elseif ( doSubDomain )                  % Integrate over a subdomain:
         out{k} = sumSubDom(F(k), a, b);
     end
     out = [out{:}];
+
+    if ( F(1).isTransposed )
+        out = out.';
+    end
 else                                    % Integrate over the whole domain:
     % Loop over the columns:
     for k = 1:numel(F)
@@ -83,6 +87,10 @@ else                                    % Integrate over the whole domain:
         out{k} = sumFullDom(F(k));
     end
     out = [out{:}];
+
+    if ( F(1).isTransposed )
+        out = out.';
+    end
 end
     
 end
@@ -125,11 +133,16 @@ end
 function out = sumSubDom(f, a, b)
     d1 = f.domain(1);
     d2 = f.domain(end);
+    
+    if ( ~isreal(a) || ~isreal(b) )
+        error('CHEBFUN:CHEBFUN:sum:sumSubDom:complex', ...
+            'Chebfun/sum does not support complex limits of integration.');
+    end
 
     if ( isnumeric(a) && isnumeric(b) )
 
         % Validate the subdomain:
-        if ( (a < d1) || (b > d2) )
+        if ( (min(a,b) < d1) || (max(a,b) > d2) )
             error('CHEBFUN:CHEBFUN:sum:sumSubDom:ab', 'Not a valid subdomain.');
             
         elseif ( (a == d1) && (b == d2) )

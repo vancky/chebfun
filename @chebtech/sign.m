@@ -8,7 +8,7 @@ function f = sign(f, pref)
 %
 % See also ABS.
 
-% Copyright 2015 by The University of Oxford and The Chebfun Developers.
+% Copyright 2017 by The University of Oxford and The Chebfun Developers.
 % See http://www.chebfun.org/ for Chebfun information.
 
 if ( isreal(f) )
@@ -19,7 +19,6 @@ if ( isreal(f) )
     meanfx = mean(fx, 1);
     % Compute the floor:
     f.coeffs = sign(meanfx);
-    f.epslevel = eps;
     
 else
     if ( nargin == 1 )

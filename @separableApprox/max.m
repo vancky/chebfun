@@ -7,13 +7,13 @@ function h = max( f, g, dim )
 %   DIM direction. If DIM = 1 is along the y-direction and DIM = 2 is along the
 %   x-direction.
 %
-%   WARNING: This function is not always accurate to full machine precision. 
+%   WARNING: This function is not always accurate to the expected precision.
 % 
 %   For the global maximum use MAX2.
 %
 % See also MIN, MAX2, MIN2, MINANDMAX2.
 
-% Copyright 2015 by The University of Oxford and The Chebfun Developers.
+% Copyright 2017 by The University of Oxford and The Chebfun Developers.
 % See http://www.chebfun.org/ for Chebfun information.
 
 % Empty check: 
@@ -48,11 +48,11 @@ n = 2049;
 if ( dim == 1 )
     vals = sample(f, n, n); 
     h = chebfun( max( vals ).', dom(1:2), 'splitting', 'on' );
-    h = simplify( h.' ); 
+    h = simplify( h.', [], 'globaltol' ); 
 elseif ( dim == 2 )
     vals = sample(f, n, n);  
     h = chebfun( max( vals, [], 2 ), dom(3:4), 'splitting', 'on' );
-    h = simplify( h );
+    h = simplify( h, [], 'globaltol' );
 elseif ( dim == 0 ) 
     error('CHEBFUN:SEPARABLEAPPROX:max:dim', ...
         'Dimension argument must be a positive integer scalar within indexing range.')

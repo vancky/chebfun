@@ -10,7 +10,7 @@ function out = sum(f, dim)
 %
 % See also CUMSUM, DIFF.
 
-% Copyright 2015 by The University of Oxford and The Chebfun Developers. 
+% Copyright 2017 by The University of Oxford and The Chebfun Developers. 
 % See http://www.chebfun.org/ for Chebfun information.
 
 % Get the length of the values:
@@ -21,9 +21,6 @@ n = size(f.values, 1);
 if ( nargin > 1 && dim == 2 )
     f.values = sum(f.values, dim);
     f.coeffs = sum(f.coeffs, dim);
-    vscale = max(abs(f.values), [], 1);
-    f.epslevel = sum(f.epslevel.*f.vscale, 2)./vscale;
-    f.vscale = vscale;
     f.isReal = all(f.isReal);
     out = f;
     return

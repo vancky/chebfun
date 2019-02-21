@@ -4,7 +4,7 @@ function s = plus(f, g)
 %
 % See also MINUS.
 
-% Copyright 2015 by The University of Oxford and The Chebfun Developers. 
+% Copyright 2017 by The University of Oxford and The Chebfun Developers. 
 % See http://www.chebfun.org/ for Chebfun information.
 
 % If one of the arguments is empty:
@@ -122,6 +122,16 @@ elseif ( all(abs(round(fExps - gExps) - (fExps - gExps)) < tolExps) )
 else
     % Case 3: Nontrivial difference in the exponents of F and G. Form a new
     % function handle for the sum from F and G.
+
+    % It's worth looking for the special case when one of f or g is actually a
+    % zero funtion here. See #1423.
+    if ( iszero(f) )
+        s = g;
+        return
+    elseif ( iszero(g) )
+        s = f;
+        return
+    end
     
     warning('CHEBFUN:SINGFUN:plus:exponentDiff', ...
         ['Non-integer difference in the exponents of the two SINGFUN ' ...
@@ -129,11 +139,10 @@ else
     
     % Define a function handle for the sum:
     op = @(x) feval(f, x) + feval(g, x);
-    
+
     % The new scales for the sum:
     vScale = get(f, 'vscale') + get(g, 'vscale');
-    hScale = get(f, 'hscale');
-    
+
     % Take the smallest exponents to be those for the summation:
     exps = [get(f, 'exponents'); get(g, 'exponents')];
     exps = min(exps);
@@ -141,7 +150,6 @@ else
     % Construct a new SINGFUN for the sum:
     data.exponents = exps;
     data.vscale = vScale;
-    data.hscale = hScale;
     s = singfun(op, data, []);
 end
 
